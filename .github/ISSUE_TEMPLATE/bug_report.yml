@@ -1,0 +1,53 @@
+name: Bug report
+description: 报告登录失败、兼容性或自动认证问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请不要提交一卡通号、校园网密码或任何未脱敏的凭据信息。
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 平台
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Android / Termux
+        - 其他
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python 版本
+      placeholder: "例如 3.12.7"
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: 执行命令
+      placeholder: "例如 python autologin.py"
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: 实际表现
+      description: 请提供脱敏后的终端输出。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期表现
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: 其他信息
+      description: 是否已连接 seu-wlan、是否可稳定复现等。
