@@ -43,19 +43,26 @@ def _read_username() -> str | None:
 
 def _write_username(username: str) -> None:
     CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CONFIG_FILE.write_text(json.dumps({"username": username}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    CONFIG_FILE.write_text(
+        json.dumps({"username": username}, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
 
-def _read_password(username: str) -> str | None:
-    env = os.getenv(ENV_PASSWORD)
-    if env:
-        return env
+def _read_password_from_keyring(username: str) -> str | None:
     if keyring is None:
         return None
     try:
         return keyring.get_password(SERVICE_NAME, username)
     except Exception:
         return None
+
+
+def _read_password(username: str) -> str | None:
+    env = os.getenv(ENV_PASSWORD)
+    if env:
+        return env
+    return _read_password_from_keyring(username)
 
 
 def _write_password(username: str, password: str) -> bool:
@@ -66,6 +73,18 @@ def _write_password(username: str, password: str) -> bool:
         return True
     except Exception:
         return False
+
+
+def store(username: str, password: str) -> bool:
+    username = username.strip()
+    if not username or not password:
+        return False
+    _write_username(username)
+    return _write_password(username, password)
+
+
+def has_persisted_password(username: str) -> bool:
+    return bool(_read_password_from_keyring(username))
 
 
 def setup() -> tuple[str, str, bool]:
@@ -81,8 +100,7 @@ def setup() -> tuple[str, str, bool]:
     if not password:
         raise ValueError("校园网密码不能为空。")
 
-    _write_username(username)
-    stored = _write_password(username, password)
+    stored = store(username, password)
     return username, password, stored
 
 
@@ -91,9 +109,11 @@ def get(interactive: bool = True) -> tuple[str, str]:
     password = _read_password(username) if username else None
     if username and password:
         return username, password
+
     if not interactive:
         missing = "账号和密码" if not username else "密码"
         raise ValueError(f"缺少已保存的{missing}。")
+
     username, password, _ = setup()
     return username, password
 
