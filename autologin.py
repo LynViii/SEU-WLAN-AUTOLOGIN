@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import os
 import subprocess
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -28,13 +27,15 @@ def describe(status: client.Status) -> str:
 
 
 def ensure_authenticated(*, interactive: bool, quiet: bool = False, to_log: bool = False) -> bool:
+    # 首次运行先完成凭据配置；以后这里会直接从本机安全存储读取，不再询问。
+    username, password = credentials.get(interactive=interactive)
+
     session = client.make_session()
     current = client.status(session)
     if current.authenticated:
         emit(describe(current), quiet=quiet, to_log=to_log)
         return True
 
-    username, password = credentials.get(interactive=interactive)
     emit("正在认证……", quiet=quiet, to_log=to_log)
     result = client.login(username, password, session=session)
     emit(describe(result), quiet=quiet, to_log=to_log)
@@ -105,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
             print(describe(client.status()))
             return 0
         if args.install_startup:
+            credentials.get(interactive=True)
             path = startup.install(Path(__file__))
             print(f"✓ 已安装 Windows 自动启动：{path}")
             print("下次登录 Windows 后会后台运行 --watch，并直接使用已保存凭据自动认证。")
