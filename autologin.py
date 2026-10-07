@@ -27,7 +27,6 @@ def describe(status: client.Status) -> str:
 
 
 def ensure_authenticated(*, interactive: bool, quiet: bool = False, to_log: bool = False) -> bool:
-    # 首次运行先完成凭据配置；以后这里会直接从本机安全存储读取，不再询问。
     username, password = credentials.get(interactive=interactive)
 
     session = client.make_session()
@@ -45,16 +44,28 @@ def ensure_authenticated(*, interactive: bool, quiet: bool = False, to_log: bool
 def reconnect_windows(profile: str, *, quiet: bool, to_log: bool) -> bool:
     if os.name != "nt":
         return False
+
     emit(f"尝试重新连接 Wi-Fi：{profile}", quiet=quiet, to_log=to_log)
-    subprocess.run(["netsh", "wlan", "disconnect"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    subprocess.run(
+        ["netsh", "wlan", "disconnect"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
     time.sleep(3)
-    result = subprocess.run(["netsh", "wlan", "connect", f"name={profile}"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+    result = subprocess.run(
+        ["netsh", "wlan", "connect", f"name={profile}"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
     return result.returncode == 0
 
 
 def watch(interval: int, recover_after: int, profile: str, quiet: bool) -> int:
     failures = 0
     emit("SEU WLAN 后台守护已启动。", quiet=quiet, to_log=True)
+
     while True:
         try:
             ensure_authenticated(interactive=False, quiet=quiet, to_log=True)
@@ -90,6 +101,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+
     try:
         if args.setup:
             _, _, stored = credentials.setup()
@@ -98,22 +110,33 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 print("! 当前系统没有可用的安全凭据后端；本次可用，但下次可能需要重新输入密码。")
             return 0
+
         if args.forget:
             credentials.forget()
             print("✓ 已删除本机保存的账号信息。")
             return 0
+
         if args.status:
             print(describe(client.status()))
             return 0
+
         if args.install_startup:
-            credentials.get(interactive=True)
+            username, password = credentials.get(interactive=True)
+            if not credentials.has_persisted_password(username):
+                if not credentials.store(username, password):
+                    raise RuntimeError(
+                        "无法把密码写入系统凭据管理器，未安装自动启动。"
+                        "请先安装 requirements/desktop.txt 并确认系统 keyring 可用。"
+                    )
             path = startup.install(Path(__file__))
             print(f"✓ 已安装 Windows 自动启动：{path}")
             print("下次登录 Windows 后会后台运行 --watch，并直接使用已保存凭据自动认证。")
             return 0
+
         if args.uninstall_startup:
             print("✓ 已移除 Windows 自动启动。" if startup.uninstall() else "○ 尚未安装 Windows 自动启动。")
             return 0
+
         if args.watch:
             if args.interval < 15:
                 raise ValueError("--interval 不能小于 15 秒。")
@@ -122,6 +145,7 @@ def main(argv: list[str] | None = None) -> int:
             return watch(args.interval, args.recover_after, args.profile, args.quiet)
 
         return 0 if ensure_authenticated(interactive=True, quiet=args.quiet) else 1
+
     except KeyboardInterrupt:
         if not args.quiet:
             print("\n已退出。")
