@@ -18,6 +18,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Compile
-        run: python -m py_compile login.py auto_reconnect.py
+        run: python -m py_compile autologin.py seu_wlan/*.py
       - name: Unit tests
         run: python -m unittest discover -s tests -v
