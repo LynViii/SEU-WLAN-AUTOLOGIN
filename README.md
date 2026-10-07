@@ -1,6 +1,12 @@
 # SEU-WLAN-AUTOLOGIN
 
-东南大学 `seu-wlan` 自动认证工具。第一次配置账号密码后，后续直接运行脚本即可：**已认证则退出，未认证则自动登录**。Windows 还可以安装为登录系统后自动后台守护。
+[![Python checks](https://github.com/LynViii/SEU-WLAN-AUTOLOGIN/actions/workflows/python.yml/badge.svg)](https://github.com/LynViii/SEU-WLAN-AUTOLOGIN/actions/workflows/python.yml)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+东南大学 `seu-wlan` 自动认证工具。第一次配置账号密码后，后续直接运行即可：**已认证则退出，未认证则自动登录**。支持 Windows / macOS / Linux，并提供 Android Termux 自动化方案。
+
+> 当前代码、模拟网关测试和 CI 已通过；**真实 SEU 校园网认证仍待实地验证**。如果学校认证接口有变化，将根据真实网关返回继续适配。
 
 ## 快速开始
 
@@ -86,7 +92,7 @@ python autologin.py --uninstall-startup
 
 ## Android
 
-Android 推荐 **Termux + Termux:Boot**，可在开机后运行同一套 Python 认证逻辑。完整步骤见 [`docs/android.md`](docs/android.md)。
+Android 推荐 **Termux + Termux:Boot**；也提供连接 `seu-wlan` 时事件触发的省电方案。完整步骤见 [`docs/android.md`](docs/android.md)。
 
 ## 项目结构
 
@@ -100,9 +106,20 @@ SEU-WLAN-AUTOLOGIN/
 ├── docs/
 │   └── android.md
 ├── tests/
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── SECURITY.md
 ├── requirements.txt
 └── requirements-desktop.txt
 ```
+
+## 开发与反馈
+
+- 版本变化：[`CHANGELOG.md`](CHANGELOG.md)
+- 开发与贡献：[`CONTRIBUTING.md`](CONTRIBUTING.md)
+- 凭据与安全：[`SECURITY.md`](SECURITY.md)
+
+提交 Bug 时请提供操作系统、Python 版本、执行命令和**脱敏后的**终端输出，不要公开一卡通号或校园网密码。
 
 ## 说明
 
