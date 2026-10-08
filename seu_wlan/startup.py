@@ -115,7 +115,10 @@ def _install_macos(entry_script: Path) -> Path:
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
-  <true/>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
 </dict>
 </plist>
 """
