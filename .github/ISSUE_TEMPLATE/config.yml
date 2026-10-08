@@ -1,1 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
+contact_links:
+  - name: Troubleshooting
+    url: https://github.com/LynViii/SEU-WLAN-AUTOLOGIN/blob/main/docs/TROUBLESHOOTING.md
+    about: 提交 Issue 前先检查常见问题与诊断步骤
+  - name: Security report
+    url: https://github.com/LynViii/SEU-WLAN-AUTOLOGIN/security/advisories/new
+    about: 涉及凭据或其他敏感信息时，请使用私密安全报告而不是公开 Issue
