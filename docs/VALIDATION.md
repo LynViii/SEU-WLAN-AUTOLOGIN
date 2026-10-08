@@ -21,7 +21,9 @@
 - 日志轮转；
 - 非目标 Wi-Fi 不误断；
 - 后台守护单实例；
-- Windows 单文件 EXE 构建与启动 smoke test。
+- Windows 单文件 EXE 构建与启动 smoke test；
+- 切换其他 Wi-Fi 时守护不执行认证、不调用 Wi-Fi 断开/连接控制；
+- SSID 暂时无法识别时守护只等待，不修改网络。
 
 ## 自动化验证
 
