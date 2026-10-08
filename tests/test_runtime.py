@@ -59,6 +59,19 @@ class RuntimeTests(unittest.TestCase):
         self.assertFalse(result)
         run.assert_not_called()
 
+    def test_watch_lock_allows_only_one_instance(self):
+        lock_dir = Path(self.tempdir.name) / "lock"
+        with patch.object(autologin.credentials, "config_dir", return_value=lock_dir):
+            first = autologin.WatchLock()
+            second = autologin.WatchLock()
+
+            self.assertTrue(first.acquire())
+            self.assertFalse(second.acquire())
+
+            first.release()
+            self.assertTrue(second.acquire())
+            second.release()
+
 
 if __name__ == "__main__":
     unittest.main()
