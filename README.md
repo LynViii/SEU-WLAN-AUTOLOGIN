@@ -56,6 +56,8 @@ SEU-WLAN-AUTOLOGIN.exe
 
 因此最初下载的 EXE 后续可以移动或删除。
 
+Windows 后台守护只负责 `seu-wlan` 认证，**不会主动断开、切换或重连其他 Wi-Fi**。
+
 ## Python / 源码方式
 
 Windows、macOS、Linux 均可：
