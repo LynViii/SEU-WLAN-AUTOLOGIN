@@ -2,7 +2,7 @@
 
 | 平台 | 当前方案 | 自动化程度 | 状态 |
 | --- | --- | --- | --- |
-| Windows | Python + Credential Manager + Startup | 登录系统后后台守护 | Ready for field test |
+| Windows | Python + Credential Manager + Startup | 登录系统后后台守护 | **Verified on real SEU WLAN** |
 | macOS / Linux | Python + keyring | 一次运行 / 持续守护 | Ready for field test |
 | Android | Termux + Termux:Boot / Tasker | 开机守护或 Wi-Fi 事件触发 | Ready for field test |
 | iOS / iPadOS | Shortcuts + Scriptable | 连接 `seu-wlan` 自动触发 | Ready for field test |
