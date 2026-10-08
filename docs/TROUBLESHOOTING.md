@@ -72,6 +72,21 @@ seu-wlan --install-startup
 
 Windows EXE 模式没有这个问题，因为安装守护时会复制到固定 LocalAppData 目录。
 
+## 切换到其他 Wi-Fi 后网络被断开
+
+v1.0 正式发布前曾发现一个 Windows 守护逻辑问题：在 Wi-Fi 切换过程中，SSID 暂时识别失败时，旧逻辑可能把认证网关不可达误判为 `seu-wlan` 掉线，并尝试重连 Wi-Fi。
+
+当前实现已经移除守护进程的 Wi-Fi 控制能力：
+
+- 当前 SSID 是 `seu-wlan`：只检查并补认证；
+- 当前是其他 Wi-Fi：等待，不修改网络；
+- 当前未连接：等待，不修改网络；
+- SSID 暂时无法识别：等待，不修改网络。
+
+因此后台守护不再调用 `netsh wlan disconnect` 或 `netsh wlan connect`。
+
+如果本机仍出现自动切网，说明正在运行旧版本守护进程。停止旧守护、更新程序后重新安装 Startup。
+
 ## 学校认证接口变化
 
 如果浏览器还能正常登录，而工具突然失败，请提交 Issue，并附：
