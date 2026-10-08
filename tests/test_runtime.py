@@ -44,21 +44,6 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(backup.exists())
         self.assertIn("new", autologin.credentials.LOG_FILE.read_text(encoding="utf-8-sig"))
 
-    def test_reconnect_never_disconnects_other_wifi(self):
-        with (
-            patch.object(autologin.os, "name", "nt"),
-            patch.object(autologin, "current_windows_ssid", return_value="Home-WiFi"),
-            patch.object(autologin.subprocess, "run") as run,
-        ):
-            result = autologin.reconnect_windows(
-                "seu-wlan",
-                quiet=True,
-                to_log=False,
-            )
-
-        self.assertFalse(result)
-        run.assert_not_called()
-
     def test_watch_lock_allows_only_one_instance(self):
         lock_dir = Path(self.tempdir.name) / "lock"
         with patch.object(autologin.credentials, "config_dir", return_value=lock_dir):
@@ -71,6 +56,36 @@ class RuntimeTests(unittest.TestCase):
             first.release()
             self.assertTrue(second.acquire())
             second.release()
+
+    def test_other_wifi_never_attempts_authentication(self):
+        sleeps = iter([None, KeyboardInterrupt()])
+        with (
+            patch.object(autologin.os, "name", "nt"),
+            patch.object(autologin, "current_windows_ssid", return_value="Home-WiFi"),
+            patch.object(autologin, "ensure_authenticated") as authenticate,
+            patch.object(autologin.time, "sleep", side_effect=lambda *_: next(sleeps)),
+            patch.object(autologin.WatchLock, "acquire", return_value=True),
+            patch.object(autologin.WatchLock, "release"),
+        ):
+            with self.assertRaises(KeyboardInterrupt):
+                autologin.watch(60, "seu-wlan", True)
+
+        authenticate.assert_not_called()
+
+    def test_unknown_wifi_never_attempts_authentication(self):
+        sleeps = iter([None, KeyboardInterrupt()])
+        with (
+            patch.object(autologin.os, "name", "nt"),
+            patch.object(autologin, "current_windows_ssid", return_value=None),
+            patch.object(autologin, "ensure_authenticated") as authenticate,
+            patch.object(autologin.time, "sleep", side_effect=lambda *_: next(sleeps)),
+            patch.object(autologin.WatchLock, "acquire", return_value=True),
+            patch.object(autologin.WatchLock, "release"),
+        ):
+            with self.assertRaises(KeyboardInterrupt):
+                autologin.watch(60, "seu-wlan", True)
+
+        authenticate.assert_not_called()
 
 
 if __name__ == "__main__":
