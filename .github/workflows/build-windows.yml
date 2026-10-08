@@ -3,17 +3,14 @@ name: Build Windows EXE
 on:
   push:
     branches: [main]
-    tags: ["v*"]
     paths:
       - "autologin.py"
       - "seu_wlan/**"
       - "requirements/**"
       - "packaging/**"
+      - "pyproject.toml"
       - ".github/workflows/build-windows.yml"
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   build:
@@ -53,10 +50,3 @@ jobs:
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
-
-      - name: Create release for version tags
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" ".\dist\SEU-WLAN-AUTOLOGIN.exe" ".\dist\SHA256SUMS.txt" --title "SEU-WLAN-AUTOLOGIN ${{ github.ref_name }}" --generate-notes
