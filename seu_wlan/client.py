@@ -53,11 +53,12 @@ def make_session() -> requests.Session:
 
 
 def parse_jsonp(payload: str) -> dict[str, Any]:
-    match = re.search(r"\{.*\}", payload, flags=re.DOTALL)
-    if not match:
+    start = payload.find("{")
+    end = payload.rfind("}")
+    if start < 0 or end <= start:
         raise GatewayUnavailable("认证网关返回了无法识别的数据。")
     try:
-        data = json.loads(match.group(0))
+        data = json.loads(payload[start : end + 1])
     except json.JSONDecodeError as exc:
         raise GatewayUnavailable("认证网关返回了无效 JSON。") from exc
     if not isinstance(data, dict):
@@ -96,7 +97,12 @@ def _decode_message(raw: Any) -> str:
         return text
 
 
-def login(username: str, password: str, session: requests.Session | None = None) -> Status:
+def login(
+    username: str,
+    password: str,
+    session: requests.Session | None = None,
+    known_status: Status | None = None,
+) -> Status:
     username = username.strip()
     if not username:
         raise AuthenticationRejected("一卡通号不能为空。")
@@ -104,7 +110,7 @@ def login(username: str, password: str, session: requests.Session | None = None)
         raise AuthenticationRejected("校园网密码不能为空。")
 
     session = session or make_session()
-    current = status(session)
+    current = known_status or status(session)
     if current.authenticated:
         return current
     if not current.ip:
