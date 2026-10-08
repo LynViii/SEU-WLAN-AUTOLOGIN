@@ -4,11 +4,11 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-东南大学 `seu-wlan` 自动认证工具。核心目标只有一个：**第一次配置账号密码后，以后尽可能自动完成校园网认证。**
+东南大学 `seu-wlan` 自动认证工具。第一次配置账号密码后，后续可自动完成校园网认证。
 
-> 当前代码、模拟网关测试与 CI 已通过；真实 SEU 校园网链路将在现场完成最终验证。
+> **Windows + 真实 SEU `seu-wlan` 已于 2026-10-08 完成现场验证，自动认证成功。**
 
-## Desktop 快速开始
+## Windows 快速开始
 
 ```bash
 git clone https://github.com/LynViii/SEU-WLAN-AUTOLOGIN.git
@@ -17,9 +17,18 @@ python -m pip install -r requirements/desktop.txt
 python autologin.py
 ```
 
-第一次运行输入一卡通号和密码；以后再次运行 `python autologin.py` 会直接读取本机保存的凭据并自动判断是否需要认证。
+第一次运行：
 
-常用命令：
+```text
+东南大学一卡通号:
+校园网密码（输入内容显示为 *）: ********
+正在认证……
+✓ 已认证（IP: ...）
+```
+
+密码只显示等量的 `*`，不会显示真实字符。凭据保存后，再次运行不会重复询问账号密码。
+
+## 常用命令
 
 ```bash
 python autologin.py
@@ -35,9 +44,9 @@ python autologin.py --uninstall-startup
 
 | 平台 | 方案 | 当前状态 |
 | --- | --- | --- |
-| Windows | Python + Credential Manager + Startup | 待现场验证 |
-| macOS / Linux | Python + keyring | 待现场验证 |
-| Android | Termux + Termux:Boot / Tasker | 待现场验证 |
+| Windows | Python + Credential Manager + Startup | **真实校园网已验证** |
+| macOS / Linux | Python + keyring | 待实测 |
+| Android | Termux + Termux:Boot / Tasker | 待实测 |
 | iOS / iPadOS | Shortcuts + Scriptable | 已完成实现，待真机验证 |
 | HarmonyOS | ArkTS 原生方案 | PoC，后台冷启动能力待验证 |
 
@@ -56,19 +65,26 @@ python autologin.py --uninstall-startup
 
 架构说明见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
 
-## Windows 自动认证
+## Windows 后台自动认证
 
-第一次完成凭据配置后：
+完成一次凭据配置后：
 
 ```bash
 python autologin.py --install-startup
 ```
 
-以后登录 Windows 后后台启动守护，连接到 `seu-wlan` 时自动检查并补登。具体见 [`platforms/windows/`](platforms/windows/)。
+以后登录 Windows 后后台运行 `--watch --quiet`。
 
-## 明天现场验证
+守护模式会：
 
-请严格按 [`docs/FIELD_TEST.md`](docs/FIELD_TEST.md) 的顺序测试：先单次登录，再凭据复用，再断线重连，再守护，最后才安装 Startup。
+- 连接 `seu-wlan` 时自动检查并补登；
+- 当前连接其他 Wi-Fi 时保持等待，不会强制断开其他网络；
+- 网关暂时不可达时按设定次数尝试恢复；
+- 只在状态变化时记录关键日志，避免重复刷屏；
+- 日志使用带 BOM 的 UTF-8，兼容 Windows PowerShell `Get-Content`；
+- 日志超过约 512 KB 自动轮转。
+
+Windows 说明见 [`platforms/windows/`](platforms/windows/)。
 
 ## 仓库结构
 
@@ -79,7 +95,7 @@ SEU-WLAN-AUTOLOGIN/
 ├── platforms/             # Windows / Android / iOS / HarmonyOS
 ├── requirements/          # Python 依赖
 ├── tests/                 # 自动测试
-├── docs/                  # 架构与现场测试
+├── docs/                  # 架构与现场测试记录
 ├── .github/               # CI / Issue / 维护说明
 ├── CHANGELOG.md
 ├── LICENSE
@@ -88,8 +104,8 @@ SEU-WLAN-AUTOLOGIN/
 
 ## 安全
 
-- 不把密码写入仓库；
-- 桌面端使用系统凭据存储；
+- 密码不写入仓库；
+- Windows / 桌面端通过系统凭据存储保存密码；
 - iOS 使用 Scriptable Keychain；
 - Android 自动化凭据仅保存在 Termux 私有目录；
 - 项目不包含遥测。
