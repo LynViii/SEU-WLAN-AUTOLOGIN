@@ -1,0 +1,62 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths:
+      - "autologin.py"
+      - "seu_wlan/**"
+      - "requirements/**"
+      - "packaging/**"
+      - ".github/workflows/build-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install build dependencies
+        run: python -m pip install -r requirements/build.txt
+
+      - name: Build single-file EXE
+        run: pyinstaller --clean --noconfirm packaging/windows.spec
+
+      - name: Smoke test EXE
+        shell: pwsh
+        run: |
+          & .\dist\SEU-WLAN-AUTOLOGIN.exe --version
+          & .\dist\SEU-WLAN-AUTOLOGIN.exe --help | Out-Null
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Generate SHA256
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash .\dist\SEU-WLAN-AUTOLOGIN.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  SEU-WLAN-AUTOLOGIN.exe" | Out-File .\dist\SHA256SUMS.txt -Encoding ascii
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SEU-WLAN-AUTOLOGIN-windows-x64
+          path: |
+            dist/SEU-WLAN-AUTOLOGIN.exe
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create release for version tags
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" ".\dist\SEU-WLAN-AUTOLOGIN.exe" ".\dist\SHA256SUMS.txt" --title "SEU-WLAN-AUTOLOGIN ${{ github.ref_name }}" --generate-notes
