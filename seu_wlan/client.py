@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import base64
 import json
-import re
 import time
 from dataclasses import dataclass
 from typing import Any
 
 import requests
+
+from . import __version__
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -48,7 +49,7 @@ def make_session() -> requests.Session:
     adapter = HTTPAdapter(max_retries=retry)
     session = requests.Session()
     session.mount("https://", adapter)
-    session.headers.update({"User-Agent": "SEU-WLAN-AUTOLOGIN/2"})
+    session.headers.update({"User-Agent": f"SEU-WLAN-AUTOLOGIN/{__version__}"})
     return session
 
 
