@@ -72,7 +72,7 @@ def _source_command(entry_script: Path) -> list[str]:
 
 
 def _install_windows(entry_script: Path) -> Path:
-    target = startup_file()
+    target = _startup_dir() / WINDOWS_STARTUP_NAME
     target.parent.mkdir(parents=True, exist_ok=True)
 
     if is_frozen():
@@ -97,7 +97,7 @@ def _install_windows(entry_script: Path) -> Path:
 
 
 def _install_macos(entry_script: Path) -> Path:
-    target = startup_file()
+    target = _mac_launch_agents_dir() / MAC_LAUNCH_AGENT
     target.parent.mkdir(parents=True, exist_ok=True)
     args = _source_command(entry_script)
 
@@ -137,7 +137,7 @@ def _install_linux(entry_script: Path) -> Path:
     if not shutil.which("systemctl"):
         raise RuntimeError("当前 Linux 环境未找到 systemctl，无法安装用户级 systemd 守护。")
 
-    target = startup_file()
+    target = _linux_user_service_dir() / LINUX_SERVICE_NAME
     target.parent.mkdir(parents=True, exist_ok=True)
     command = " ".join(_systemd_quote(arg) for arg in _source_command(entry_script))
     unit = f"""[Unit]
