@@ -61,6 +61,7 @@ class RuntimeTests(unittest.TestCase):
         sleeps = iter([None, KeyboardInterrupt()])
         with (
             patch.object(autologin.os, "name", "nt"),
+            patch.object(autologin.credentials, "config_dir", return_value=Path(self.tempdir.name)),
             patch.object(autologin, "current_windows_ssid", return_value="Home-WiFi"),
             patch.object(autologin, "ensure_authenticated") as authenticate,
             patch.object(autologin.time, "sleep", side_effect=lambda *_: next(sleeps)),
@@ -76,6 +77,7 @@ class RuntimeTests(unittest.TestCase):
         sleeps = iter([None, KeyboardInterrupt()])
         with (
             patch.object(autologin.os, "name", "nt"),
+            patch.object(autologin.credentials, "config_dir", return_value=Path(self.tempdir.name)),
             patch.object(autologin, "current_windows_ssid", return_value=None),
             patch.object(autologin, "ensure_authenticated") as authenticate,
             patch.object(autologin.time, "sleep", side_effect=lambda *_: next(sleeps)),
