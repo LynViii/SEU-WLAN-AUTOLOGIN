@@ -15,6 +15,15 @@ from seu_wlan import __version__, client, credentials, startup
 MAX_LOG_BYTES = 512 * 1024
 
 
+def _configure_stdio() -> None:
+    """Avoid crashes when a terminal code page cannot represent Chinese text."""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, OSError):
+            pass
+
+
 def _prepare_log_file() -> None:
     path = credentials.LOG_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -237,6 +246,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    _configure_stdio()
     args = build_parser().parse_args(argv)
 
     try:
