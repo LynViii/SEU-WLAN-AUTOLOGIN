@@ -95,17 +95,36 @@ def current_windows_ssid() -> str | None:
     if os.name != "nt":
         return None
 
+    # Read bytes explicitly: localized Windows installations may use a
+    # console code page that differs from Python's default text encoding.
     result = subprocess.run(
         ["netsh", "wlan", "show", "interfaces"],
         capture_output=True,
-        text=True,
-        errors="replace",
         check=False,
     )
     if result.returncode != 0:
         return None
 
-    for line in result.stdout.splitlines():
+    raw = result.stdout or b""
+    output = ""
+    for encoding in (
+        getattr(sys.stdout, "encoding", None),
+        "utf-8",
+        "mbcs",
+        "gbk",
+    ):
+        if not encoding:
+            continue
+        try:
+            output = raw.decode(encoding)
+            break
+        except (LookupError, UnicodeDecodeError):
+            continue
+
+    if not output:
+        output = raw.decode(errors="replace")
+
+    for line in output.splitlines():
         if ":" not in line:
             continue
         key, value = line.split(":", 1)
@@ -113,39 +132,6 @@ def current_windows_ssid() -> str | None:
             ssid = value.strip()
             return ssid or None
     return None
-
-
-def reconnect_windows(profile: str, *, quiet: bool, to_log: bool) -> bool:
-    if os.name != "nt":
-        return False
-
-    current = current_windows_ssid()
-    if current and current.casefold() != profile.casefold():
-        emit(
-            f"当前 Wi-Fi 为 {current}，不会为 {profile} 断开现有连接。",
-            quiet=quiet,
-            to_log=to_log,
-        )
-        return False
-
-    emit(f"尝试重新连接 Wi-Fi：{profile}", quiet=quiet, to_log=to_log)
-
-    if current:
-        subprocess.run(
-            ["netsh", "wlan", "disconnect"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-        time.sleep(3)
-
-    result = subprocess.run(
-        ["netsh", "wlan", "connect", f"name={profile}"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    return result.returncode == 0
 
 
 class WatchLock:
@@ -196,13 +182,12 @@ class WatchLock:
         self.handle = None
 
 
-def watch(interval: int, recover_after: int, profile: str, quiet: bool) -> int:
+def watch(interval: int, profile: str, quiet: bool) -> int:
     lock = WatchLock()
     if not lock.acquire():
         emit("已有一个 SEU WLAN 后台守护实例在运行，当前实例退出。", quiet=quiet, to_log=False)
         return 0
 
-    failures = 0
     last_state: str | None = None
     emit("SEU WLAN 后台守护已启动。", quiet=quiet, to_log=True)
 
@@ -210,16 +195,31 @@ def watch(interval: int, recover_after: int, profile: str, quiet: bool) -> int:
         while True:
             if os.name == "nt":
                 ssid = current_windows_ssid()
-                if ssid and ssid.casefold() != profile.casefold():
-                    state = f"other-wifi:{ssid}"
+
+                # Safety invariant: watch mode never changes the Windows
+                # Wi-Fi connection. Authentication is attempted only when
+                # the target SSID is positively identified.
+                if not ssid:
+                    state = "wifi-unknown"
                     if state != last_state:
                         emit(
-                            f"当前 Wi-Fi：{ssid}；等待连接 {profile}。",
+                            f"未检测到当前 Wi-Fi；等待连接 {profile}，不会修改网络连接。",
                             quiet=quiet,
                             to_log=True,
                         )
                     last_state = state
-                    failures = 0
+                    time.sleep(interval)
+                    continue
+
+                if ssid.casefold() != profile.casefold():
+                    state = f"other-wifi:{ssid}"
+                    if state != last_state:
+                        emit(
+                            f"当前 Wi-Fi：{ssid}；等待连接 {profile}，不会修改当前网络。",
+                            quiet=quiet,
+                            to_log=True,
+                        )
+                    last_state = state
                     time.sleep(interval)
                     continue
 
@@ -232,26 +232,18 @@ def watch(interval: int, recover_after: int, profile: str, quiet: bool) -> int:
                 if last_state != "authenticated":
                     emit(describe(result), quiet=quiet, to_log=True)
                 last_state = "authenticated"
-                failures = 0
 
             except client.AuthenticationRejected as exc:
                 state = f"auth-rejected:{exc}"
                 if state != last_state:
                     emit(f"✗ 认证失败：{exc}", quiet=quiet, to_log=True)
                 last_state = state
-                failures = 0
 
             except (client.GatewayUnavailable, ValueError) as exc:
-                failures += 1
                 state = f"gateway-error:{exc}"
                 if state != last_state:
                     emit(f"! {exc}", quiet=quiet, to_log=True)
                 last_state = state
-
-                if failures >= recover_after and os.name == "nt":
-                    reconnect_windows(profile, quiet=quiet, to_log=True)
-                    failures = 0
-                    time.sleep(8)
 
             time.sleep(interval)
     finally:
@@ -273,6 +265,7 @@ def diagnose() -> int:
 
     if os.name == "nt":
         print(f"当前 Wi-Fi: {current_windows_ssid() or '未检测到'}")
+        print("Wi-Fi 控制: 禁用（守护只负责认证，不会切换或断开网络）")
         if startup.is_frozen():
             print(f"固定安装位置: {startup.installed_executable()}")
 
@@ -291,13 +284,12 @@ def build_parser() -> argparse.ArgumentParser:
     group.add_argument("--status", action="store_true", help="仅查看当前认证状态")
     group.add_argument("--setup", action="store_true", help="重新设置账号密码")
     group.add_argument("--forget", action="store_true", help="删除保存的账号密码")
-    group.add_argument("--watch", action="store_true", help="持续监控，掉线后自动重新认证")
+    group.add_argument("--watch", action="store_true", help="持续监控，连接 seu-wlan 后自动补认证")
     group.add_argument("--diagnose", action="store_true", help="输出脱敏后的运行环境诊断信息")
     group.add_argument("--install-startup", action="store_true", help="安装后台自动守护（Windows / macOS / Linux）")
     group.add_argument("--uninstall-startup", action="store_true", help="移除后台自动守护")
     parser.add_argument("--interval", type=int, default=60, help="守护模式检查间隔，默认 60 秒")
-    parser.add_argument("--recover-after", type=int, default=2, help="连续网关失败多少次后重连 Wi-Fi，默认 2")
-    parser.add_argument("--profile", default="seu-wlan", help="Windows Wi-Fi 配置名称")
+    parser.add_argument("--profile", default="seu-wlan", help="Windows 目标 Wi-Fi 名称")
     parser.add_argument("--quiet", action="store_true", help="不输出控制台信息，守护日志仍写入本机配置目录")
     return parser
 
@@ -351,9 +343,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.watch:
             if args.interval < 15:
                 raise ValueError("--interval 不能小于 15 秒。")
-            if args.recover_after < 1:
-                raise ValueError("--recover-after 必须至少为 1。")
-            return watch(args.interval, args.recover_after, args.profile, args.quiet)
+            return watch(args.interval, args.profile, args.quiet)
 
         ensure_authenticated(interactive=True, quiet=args.quiet)
         return 0
