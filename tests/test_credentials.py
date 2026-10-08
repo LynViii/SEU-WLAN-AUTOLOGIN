@@ -1,8 +1,11 @@
+import io
 import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from seu_wlan import credentials
@@ -47,6 +50,21 @@ class CredentialsTests(unittest.TestCase):
             clear=False,
         ):
             self.assertEqual(credentials.get(interactive=False), ("env-user", "env-pass"))
+
+    def test_masked_password_shows_stars_on_windows(self):
+        entered = iter(["s", "e", "c", "r", "e", "t", "\r"])
+        fake_msvcrt = SimpleNamespace(getwch=lambda: next(entered))
+        output = io.StringIO()
+
+        with (
+            patch.object(credentials.os, "name", "nt"),
+            patch.dict(sys.modules, {"msvcrt": fake_msvcrt}),
+            patch.object(credentials.sys, "stdout", output),
+        ):
+            password = credentials._masked_password("Password: ")
+
+        self.assertEqual(password, "secret")
+        self.assertEqual(output.getvalue(), "Password: ******\n")
 
 
 if __name__ == "__main__":
