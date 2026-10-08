@@ -1,57 +1,45 @@
 # iOS / iPadOS
 
-推荐方案：**Apple Shortcuts + Scriptable**。
-
-Apple Shortcuts 支持“连接指定 Wi‑Fi”作为个人自动化触发器，并允许 Wi‑Fi 自动化在配置后无需再次确认运行。Scriptable 可以从 Shortcuts 执行 JavaScript，并提供 Keychain 和 HTTP Request API，因此可以实现：
+推荐方案：**Apple Shortcuts + Scriptable**。不需要 Python，也不需要安装自定义 App。
 
 ```text
 连接 seu-wlan
-→ Shortcuts 自动触发
-→ 运行 Scriptable 脚本
-→ 检查 SEU 网关状态
-→ 未认证则登录
-→ 返回认证结果
+→ Shortcuts Wi-Fi 自动化触发
+→ Scriptable 运行单个 JS
+→ 自动检查 / 登录 / 复核
 ```
 
-## 1. 安装脚本
+## 安装
 
-安装 Scriptable，把本目录中的：
+1. 安装 Scriptable；
+2. 将 Release 中的 `SEU-WLAN-AUTOLOGIN-Scriptable.js` 导入 Scriptable，或复制本目录的脚本；
+3. 在 Scriptable 中手动运行一次；
+4. 输入一卡通号和密码，凭据保存到 Scriptable Keychain；
+5. 在“快捷指令 → 自动化”中新建 **Wi-Fi → seu-wlan**；
+6. 添加 Scriptable 的 **Run Script** 动作，选择该脚本；
+7. 配置为自动运行。
+
+之后连接 `seu-wlan` 时即可自动调用。
+
+## 日常管理
+
+直接在 Scriptable 中运行脚本，会显示：
+
+- 立即认证
+- 重新配置账号
+- 清除凭据
+
+Shortcuts 调用默认只执行认证，不弹管理菜单。
+
+如果需要从其他 Shortcut 控制，也可以向 Scriptable 的 Run Script 动作传入文本参数：
 
 ```text
-scriptable/seu-wlan-autologin.js
+setup
+forget
 ```
 
-复制到 Scriptable，新建脚本并命名为：
+## 安全
 
-```text
-SEU WLAN AutoLogin
-```
+账号密码保存在 Scriptable Keychain，而不是 JS 文件中。Scriptable 官方文档将 Keychain 定义为用于凭据等信息的加密安全存储。
 
-第一次请在 Scriptable App 内**手动运行一次**。脚本会提示输入一卡通号和密码，并写入 Scriptable Keychain。
-
-## 2. 建立快捷指令自动化
-
-在“快捷指令 → 自动化”中新建：
-
-1. 触发器选择 **Wi‑Fi**；
-2. 网络选择 **seu-wlan**；
-3. 添加 Scriptable 的 **Run Script** 动作；
-4. 脚本选择 **SEU WLAN AutoLogin**；
-5. 开启自动运行 / 关闭运行前询问（具体文案随 iOS 版本变化）；
-6. 第一次运行时允许所需网络和自动化权限。
-
-Apple 官方文档说明，Wi‑Fi 可以作为指定网络连接触发器，并属于可以自动运行的个人自动化类型。
-
-## 3. 注意事项
-
-- Scriptable Keychain 用来保存账号密码，不需要把密码写进快捷指令；
-- 自动化本身可配置为无需确认，但第三方 App 动作在锁屏、首次授权等场景下仍可能受系统限制，因此需要真机验证；
-- 校园网认证接口或证书如果变化，脚本也需要同步适配；
-- 不要把填有真实账号密码的脚本导出或上传。
-
-## 官方/项目文档
-
-- Apple Shortcuts：Wi‑Fi 自动化触发器
-- Apple Shortcuts：允许个人自动化自动运行
-- Scriptable：Siri Shortcuts integration
-- Scriptable：Keychain / Request API
+> iOS 自动化实现已经完成，但仍需要真实 SEU 网络 + iPhone/iPad 真机验证锁屏和后台触发行为。
