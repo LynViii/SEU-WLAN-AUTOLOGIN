@@ -41,6 +41,26 @@ class ClientTests(unittest.TestCase):
         self.assertEqual(kwargs["params"]["user_account"], ",0,213000000")
         self.assertEqual(kwargs["params"]["user_password"], "p@ss&word")
 
+    @patch("seu_wlan.client.time.sleep", return_value=None)
+    def test_known_status_avoids_duplicate_status_request(self, _sleep):
+        login = Mock(text='dr1003({"result":"1","msg":""})')
+        verified = Mock(text='dr1002({"result":1,"v46ip":"10.0.0.8"})')
+        login.raise_for_status.return_value = None
+        verified.raise_for_status.return_value = None
+        session = Mock()
+        session.get.side_effect = [login, verified]
+
+        result = client.login(
+            "213000000",
+            "secret",
+            session=session,
+            known_status=client.Status(False, "10.0.0.8"),
+        )
+
+        self.assertTrue(result.authenticated)
+        self.assertEqual(session.get.call_count, 2)
+        self.assertEqual(session.get.call_args_list[0].args[0], client.LOGIN_URL)
+
     def test_password_error(self):
         encoded = base64.b64encode(b"userid error2").decode()
         first = Mock(text='dr1002({"result":0,"v46ip":"10.0.0.8"})')
