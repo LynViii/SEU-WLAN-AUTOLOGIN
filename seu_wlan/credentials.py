@@ -76,45 +76,85 @@ def _write_password(username: str, password: str) -> bool:
 
 
 def _masked_password(prompt: str) -> str:
-    """Read a password while showing one * per entered character on Windows."""
-    if os.name != "nt":
+    """Read a password while showing one * per entered character when possible."""
+    if os.name == "nt":
+        import msvcrt
+
+        sys.stdout.write(prompt)
+        sys.stdout.flush()
+        chars: list[str] = []
+
+        while True:
+            char = msvcrt.getwch()
+
+            if char in ("\r", "\n"):
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+                return "".join(chars)
+
+            if char == "\x03":
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+                raise KeyboardInterrupt
+
+            if char == "\b":
+                if chars:
+                    chars.pop()
+                    sys.stdout.write("\b \b")
+                    sys.stdout.flush()
+                continue
+
+            if char in ("\x00", "\xe0"):
+                msvcrt.getwch()
+                continue
+
+            if char.isprintable():
+                chars.append(char)
+                sys.stdout.write("*")
+                sys.stdout.flush()
+
+    if not sys.stdin.isatty():
         return getpass.getpass(prompt)
 
-    import msvcrt
+    try:
+        import termios
+        import tty
 
-    sys.stdout.write(prompt)
-    sys.stdout.flush()
-    chars: list[str] = []
+        fd = sys.stdin.fileno()
+        previous = termios.tcgetattr(fd)
+        chars: list[str] = []
 
-    while True:
-        char = msvcrt.getwch()
+        sys.stdout.write(prompt)
+        sys.stdout.flush()
+        tty.setraw(fd)
+        try:
+            while True:
+                char = sys.stdin.read(1)
+                if char in ("\r", "\n"):
+                    sys.stdout.write("\r\n")
+                    sys.stdout.flush()
+                    return "".join(chars)
 
-        if char in ("\r", "\n"):
-            sys.stdout.write("\n")
-            sys.stdout.flush()
-            return "".join(chars)
+                if char == "\x03":
+                    sys.stdout.write("\r\n")
+                    sys.stdout.flush()
+                    raise KeyboardInterrupt
 
-        if char == "\x03":
-            sys.stdout.write("\n")
-            sys.stdout.flush()
-            raise KeyboardInterrupt
+                if char in ("\x08", "\x7f"):
+                    if chars:
+                        chars.pop()
+                        sys.stdout.write("\b \b")
+                        sys.stdout.flush()
+                    continue
 
-        if char == "\b":
-            if chars:
-                chars.pop()
-                sys.stdout.write("\b \b")
-                sys.stdout.flush()
-            continue
-
-        # Ignore function keys and arrow-key prefixes.
-        if char in ("\x00", "\xe0"):
-            msvcrt.getwch()
-            continue
-
-        if char.isprintable():
-            chars.append(char)
-            sys.stdout.write("*")
-            sys.stdout.flush()
+                if char.isprintable():
+                    chars.append(char)
+                    sys.stdout.write("*")
+                    sys.stdout.flush()
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, previous)
+    except (ImportError, OSError, termios.error):
+        return getpass.getpass(prompt)
 
 
 def store(username: str, password: str) -> bool:
