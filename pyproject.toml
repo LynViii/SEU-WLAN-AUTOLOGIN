@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seu-wlan-autologin"
+version = "1.0.0"
+description = "Lightweight automatic login tool for Southeast University seu-wlan"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+  { name = "LynViii" }
+]
+dependencies = [
+  "requests>=2.32,<3"
+]
+keywords = ["seu", "seu-wlan", "drcom", "campus-network", "autologin"]
+
+[project.optional-dependencies]
+desktop = [
+  "keyring>=25,<26"
+]
+build = [
+  "keyring>=25,<26",
+  "pyinstaller>=6.11,<7"
+]
+
+[project.scripts]
+seu-wlan = "autologin:main"
+
+[project.urls]
+Homepage = "https://github.com/LynViii/SEU-WLAN-AUTOLOGIN"
+Repository = "https://github.com/LynViii/SEU-WLAN-AUTOLOGIN"
+Issues = "https://github.com/LynViii/SEU-WLAN-AUTOLOGIN/issues"
+
+[tool.setuptools]
+py-modules = ["autologin"]
+
+[tool.setuptools.packages.find]
+include = ["seu_wlan*"]
