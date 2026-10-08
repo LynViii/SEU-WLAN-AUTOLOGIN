@@ -60,3 +60,5 @@ Get-Content "$env:APPDATA\SEU-WLAN-AUTOLOGIN\autologin.log" -Tail 100
 ~~~
 
 后台守护具备单实例保护，不会因为 Startup 与手动 --watch 同时启动而重复运行。
+
+后台守护**不会控制 Windows 的 Wi-Fi 连接**：不会执行断开、切换或强制重连。只有明确检测到当前 SSID 为 seu-wlan 时才会检查并补认证；切换到其他 Wi-Fi 或暂时识别不到 SSID 时只等待。
