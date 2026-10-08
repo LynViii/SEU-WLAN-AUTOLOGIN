@@ -1,5 +1,8 @@
 name: Build Windows EXE
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
@@ -16,9 +19,9 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
@@ -41,7 +44,7 @@ jobs:
           $hash = (Get-FileHash .\dist\SEU-WLAN-AUTOLOGIN.exe -Algorithm SHA256).Hash.ToLower()
           "$hash  SEU-WLAN-AUTOLOGIN.exe" | Out-File .\dist\SHA256SUMS.txt -Encoding ascii
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: SEU-WLAN-AUTOLOGIN-windows-x64
           path: |
