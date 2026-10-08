@@ -156,7 +156,7 @@ class WatchLock:
     def acquire(self) -> bool:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.handle = self.path.open("a+b")
-        self.handle.seek(0)
+        self.handle.seek(0, os.SEEK_END)
         if self.handle.tell() == 0:
             self.handle.write(b"0")
             self.handle.flush()
