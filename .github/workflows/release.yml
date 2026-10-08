@@ -61,8 +61,11 @@ jobs:
         with:
           path: release-assets
           merge-multiple: true
-      - name: Add iOS Scriptable file
-        run: cp platforms/ios/scriptable/seu-wlan-autologin.js release-assets/SEU-WLAN-AUTOLOGIN-Scriptable.js
+      - name: Add mobile helper files
+        run: |
+          cp platforms/ios/scriptable/seu-wlan-autologin.js release-assets/SEU-WLAN-AUTOLOGIN-Scriptable.js
+          cp platforms/android/install-termux.sh release-assets/SEU-WLAN-AUTOLOGIN-Termux-install.sh
+          cp platforms/android/uninstall-termux.sh release-assets/SEU-WLAN-AUTOLOGIN-Termux-uninstall.sh
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
