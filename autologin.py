@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import codecs
 import os
 import subprocess
 import time
@@ -10,15 +11,44 @@ from pathlib import Path
 
 from seu_wlan import client, credentials, startup
 
+MAX_LOG_BYTES = 512 * 1024
+
+
+def _prepare_log_file() -> None:
+    path = credentials.LOG_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    if path.exists() and path.stat().st_size >= MAX_LOG_BYTES:
+        backup = path.with_suffix(path.suffix + ".1")
+        try:
+            backup.unlink()
+        except FileNotFoundError:
+            pass
+        path.replace(backup)
+
+    if not path.exists():
+        path.write_bytes(codecs.BOM_UTF8)
+        return
+
+    with path.open("rb") as handle:
+        has_bom = handle.read(3) == codecs.BOM_UTF8
+    if not has_bom:
+        data = path.read_bytes()
+        path.write_bytes(codecs.BOM_UTF8 + data)
+
+
+def _append_log(line: str) -> None:
+    _prepare_log_file()
+    with credentials.LOG_FILE.open("ab") as handle:
+        handle.write((line + "\n").encode("utf-8"))
+
 
 def emit(message: str, *, quiet: bool = False, to_log: bool = False) -> None:
     line = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}"
     if not quiet:
         print(message, flush=True)
     if to_log:
-        credentials.LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with credentials.LOG_FILE.open("a", encoding="utf-8") as handle:
-            handle.write(line + "\n")
+        _append_log(line)
 
 
 def describe(status: client.Status) -> str:
@@ -26,33 +56,79 @@ def describe(status: client.Status) -> str:
     return ("✓ 已认证" if status.authenticated else "○ 未认证") + suffix
 
 
-def ensure_authenticated(*, interactive: bool, quiet: bool = False, to_log: bool = False) -> bool:
+def ensure_authenticated(
+    *,
+    interactive: bool,
+    quiet: bool = False,
+    to_log: bool = False,
+) -> client.Status:
     username, password = credentials.get(interactive=interactive)
 
     session = client.make_session()
     current = client.status(session)
     if current.authenticated:
         emit(describe(current), quiet=quiet, to_log=to_log)
-        return True
+        return current
 
     emit("正在认证……", quiet=quiet, to_log=to_log)
-    result = client.login(username, password, session=session)
+    result = client.login(
+        username,
+        password,
+        session=session,
+        known_status=current,
+    )
     emit(describe(result), quiet=quiet, to_log=to_log)
-    return True
+    return result
+
+
+def current_windows_ssid() -> str | None:
+    if os.name != "nt":
+        return None
+
+    result = subprocess.run(
+        ["netsh", "wlan", "show", "interfaces"],
+        capture_output=True,
+        text=True,
+        errors="replace",
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+
+    for line in result.stdout.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        if key.strip().upper() == "SSID":
+            ssid = value.strip()
+            return ssid or None
+    return None
 
 
 def reconnect_windows(profile: str, *, quiet: bool, to_log: bool) -> bool:
     if os.name != "nt":
         return False
 
+    current = current_windows_ssid()
+    if current and current.casefold() != profile.casefold():
+        emit(
+            f"当前 Wi-Fi 为 {current}，不会为 {profile} 断开现有连接。",
+            quiet=quiet,
+            to_log=to_log,
+        )
+        return False
+
     emit(f"尝试重新连接 Wi-Fi：{profile}", quiet=quiet, to_log=to_log)
-    subprocess.run(
-        ["netsh", "wlan", "disconnect"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    time.sleep(3)
+
+    if current:
+        subprocess.run(
+            ["netsh", "wlan", "disconnect"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        time.sleep(3)
+
     result = subprocess.run(
         ["netsh", "wlan", "connect", f"name={profile}"],
         stdout=subprocess.DEVNULL,
@@ -64,22 +140,55 @@ def reconnect_windows(profile: str, *, quiet: bool, to_log: bool) -> bool:
 
 def watch(interval: int, recover_after: int, profile: str, quiet: bool) -> int:
     failures = 0
+    last_state: str | None = None
     emit("SEU WLAN 后台守护已启动。", quiet=quiet, to_log=True)
 
     while True:
+        if os.name == "nt":
+            ssid = current_windows_ssid()
+            if ssid and ssid.casefold() != profile.casefold():
+                state = f"other-wifi:{ssid}"
+                if state != last_state:
+                    emit(
+                        f"当前 Wi-Fi：{ssid}；等待连接 {profile}。",
+                        quiet=quiet,
+                        to_log=True,
+                    )
+                last_state = state
+                failures = 0
+                time.sleep(interval)
+                continue
+
         try:
-            ensure_authenticated(interactive=False, quiet=quiet, to_log=True)
+            result = ensure_authenticated(
+                interactive=False,
+                quiet=True,
+                to_log=False,
+            )
+            if last_state != "authenticated":
+                emit(describe(result), quiet=quiet, to_log=True)
+            last_state = "authenticated"
             failures = 0
+
         except client.AuthenticationRejected as exc:
-            emit(f"✗ 认证失败：{exc}", quiet=quiet, to_log=True)
+            state = f"auth-rejected:{exc}"
+            if state != last_state:
+                emit(f"✗ 认证失败：{exc}", quiet=quiet, to_log=True)
+            last_state = state
             failures = 0
+
         except (client.GatewayUnavailable, ValueError) as exc:
             failures += 1
-            emit(f"! {exc}", quiet=quiet, to_log=True)
+            state = f"gateway-error:{exc}"
+            if state != last_state:
+                emit(f"! {exc}", quiet=quiet, to_log=True)
+            last_state = state
+
             if failures >= recover_after and os.name == "nt":
                 reconnect_windows(profile, quiet=quiet, to_log=True)
                 failures = 0
                 time.sleep(8)
+
         time.sleep(interval)
 
 
@@ -144,7 +253,8 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("--recover-after 必须至少为 1。")
             return watch(args.interval, args.recover_after, args.profile, args.quiet)
 
-        return 0 if ensure_authenticated(interactive=True, quiet=args.quiet) else 1
+        ensure_authenticated(interactive=True, quiet=args.quiet)
+        return 0
 
     except KeyboardInterrupt:
         if not args.quiet:
