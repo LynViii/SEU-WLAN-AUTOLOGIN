@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        请不要提交一卡通号、校园网密码或任何未脱敏的凭据信息。
+        请先阅读 Troubleshooting。不要提交一卡通号、校园网密码、完整登录 URL、Cookie 或未脱敏的日志。
   - type: dropdown
     id: platform
     attributes:
@@ -16,28 +16,49 @@ body:
         - macOS
         - Linux
         - Android / Termux
+        - iOS / iPadOS
+        - HarmonyOS
+        - 其他
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: 使用方式
+      options:
+        - Windows EXE
+        - Python CLI / 源码
+        - Android Termux
+        - iOS Scriptable
+        - HarmonyOS ArkTS
         - 其他
     validations:
       required: true
   - type: input
-    id: python
+    id: version
     attributes:
-      label: Python 版本
-      placeholder: "例如 3.12.7"
+      label: 工具版本
+      placeholder: "例如 1.0.0；可用 --version 查看"
     validations:
       required: true
   - type: input
     id: command
     attributes:
-      label: 执行命令
-      placeholder: "例如 python autologin.py"
+      label: 执行方式
+      placeholder: "例如 SEU-WLAN-AUTOLOGIN.exe / seu-wlan --watch / Shortcuts 自动化"
     validations:
       required: true
+  - type: textarea
+    id: diagnose
+    attributes:
+      label: 诊断信息
+      description: Python / EXE 用户请优先粘贴 --diagnose 的脱敏输出；其他平台填可用的系统与网络信息。
+      render: text
   - type: textarea
     id: behavior
     attributes:
       label: 实际表现
-      description: 请提供脱敏后的终端输出。
+      description: 请提供脱敏后的终端输出、日志或错误信息。
     validations:
       required: true
   - type: textarea
@@ -49,5 +70,5 @@ body:
   - type: textarea
     id: notes
     attributes:
-      label: 其他信息
-      description: 是否已连接 seu-wlan、是否可稳定复现等。
+      label: 补充信息
+      description: 是否已连接 seu-wlan、浏览器手动认证是否正常、问题是否稳定复现等。
