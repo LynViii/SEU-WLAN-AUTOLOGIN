@@ -227,8 +227,8 @@ def build_parser() -> argparse.ArgumentParser:
     group.add_argument("--forget", action="store_true", help="删除保存的账号密码")
     group.add_argument("--watch", action="store_true", help="持续监控，掉线后自动重新认证")
     group.add_argument("--diagnose", action="store_true", help="输出脱敏后的运行环境诊断信息")
-    group.add_argument("--install-startup", action="store_true", help="Windows：登录系统后自动启动后台守护")
-    group.add_argument("--uninstall-startup", action="store_true", help="Windows：移除自动启动")
+    group.add_argument("--install-startup", action="store_true", help="安装后台自动守护（Windows / macOS / Linux）")
+    group.add_argument("--uninstall-startup", action="store_true", help="移除后台自动守护")
     parser.add_argument("--interval", type=int, default=60, help="守护模式检查间隔，默认 60 秒")
     parser.add_argument("--recover-after", type=int, default=2, help="连续网关失败多少次后重连 Wi-Fi，默认 2")
     parser.add_argument("--profile", default="seu-wlan", help="Windows Wi-Fi 配置名称")
@@ -269,16 +269,16 @@ def main(argv: list[str] | None = None) -> int:
                         "请确认系统 keyring 可用。"
                     )
             path = startup.install(Path(__file__))
-            print(f"✓ 已安装 Windows 自动启动：{path}")
+            print(f"✓ 已安装后台自动守护：{path}")
             if startup.is_frozen():
                 print(f"✓ 后台运行副本：{startup.installed_executable()}")
                 print("现在可以移动或删除当前下载的 EXE；开机守护不会受影响。")
             else:
-                print("源码模式的启动项依赖当前 Python 和仓库路径，请不要移动仓库。")
+                print("源码模式的后台守护依赖当前 Python 和脚本路径；移动源码目录后请重新安装守护。")
             return 0
 
         if args.uninstall_startup:
-            print("✓ 已移除 Windows 自动启动。" if startup.uninstall() else "○ 尚未安装 Windows 自动启动。")
+            print("✓ 已移除后台自动守护。" if startup.uninstall() else "○ 尚未安装后台自动守护。")
             return 0
 
         if args.watch:
