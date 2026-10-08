@@ -30,5 +30,14 @@ jobs:
           seu-wlan --version
           python -m seu_wlan --version
 
+      - name: Check Android shell scripts
+        run: bash -n platforms/android/install-termux.sh platforms/android/uninstall-termux.sh
+
       - name: Check iOS Scriptable syntax
         run: node --input-type=module --check < platforms/ios/scriptable/seu-wlan-autologin.js
+
+      - name: Build wheel and sdist
+        if: matrix.python-version == '3.13'
+        run: |
+          python -m pip install build
+          python -m build
