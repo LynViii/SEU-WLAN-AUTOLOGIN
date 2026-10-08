@@ -11,3 +11,7 @@ Thumbs.db
 *.tmp
 config.json
 credentials.json
+build/
+dist/
+*.egg-info/
+.pytest_cache/
