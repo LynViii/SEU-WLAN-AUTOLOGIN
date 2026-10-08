@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "seu-wlan-autologin"
-version = "1.0.0"
+dynamic = ["version"]
 description = "Lightweight automatic login tool for Southeast University seu-wlan"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -36,6 +36,9 @@ Issues = "https://github.com/LynViii/SEU-WLAN-AUTOLOGIN/issues"
 
 [tool.setuptools]
 py-modules = ["autologin"]
+
+[tool.setuptools.dynamic]
+version = { attr = "seu_wlan.__version__" }
 
 [tool.setuptools.packages.find]
 include = ["seu_wlan*"]
