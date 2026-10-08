@@ -2,7 +2,7 @@ import codecs
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import autologin
 
@@ -44,20 +44,22 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(backup.exists())
         self.assertIn("new", autologin.credentials.LOG_FILE.read_text(encoding="utf-8-sig"))
 
-    def test_reconnect_never_disconnects_other_wifi(self):
+    def test_current_windows_ssid_parses_target_without_text_mode(self):
+        netsh = Mock(
+            returncode=0,
+            stdout=(
+                b"\r\n"
+                b"    Name                   : WLAN\r\n"
+                b"    State                  : connected\r\n"
+                b"    SSID                   : seu-wlan\r\n"
+                b"    BSSID                  : 00:11:22:33:44:55\r\n"
+            ),
+        )
         with (
-            patch.object(autologin.os, "name", "nt"),
-            patch.object(autologin, "current_windows_ssid", return_value="Home-WiFi"),
-            patch.object(autologin.subprocess, "run") as run,
+            patch.object(autologin, "is_windows", return_value=True),
+            patch.object(autologin.subprocess, "run", return_value=netsh),
         ):
-            result = autologin.reconnect_windows(
-                "seu-wlan",
-                quiet=True,
-                to_log=False,
-            )
-
-        self.assertFalse(result)
-        run.assert_not_called()
+            self.assertEqual(autologin.current_windows_ssid(), "seu-wlan")
 
     def test_watch_lock_allows_only_one_instance(self):
         lock_dir = Path(self.tempdir.name) / "lock"
@@ -71,6 +73,61 @@ class RuntimeTests(unittest.TestCase):
             first.release()
             self.assertTrue(second.acquire())
             second.release()
+
+    def test_watch_ignores_other_wifi(self):
+        lock = Mock()
+        lock.acquire.return_value = True
+
+        with (
+            patch.object(autologin, "WatchLock", return_value=lock),
+            patch.object(autologin, "is_windows", return_value=True),
+            patch.object(autologin, "current_windows_ssid", return_value="Home-WiFi"),
+            patch.object(autologin, "ensure_authenticated") as authenticate,
+            patch.object(autologin.time, "sleep", side_effect=KeyboardInterrupt),
+        ):
+            with self.assertRaises(KeyboardInterrupt):
+                autologin.watch(60, "seu-wlan", True)
+
+        authenticate.assert_not_called()
+        lock.release.assert_called_once()
+
+    def test_watch_waits_when_ssid_is_unknown(self):
+        lock = Mock()
+        lock.acquire.return_value = True
+
+        with (
+            patch.object(autologin, "WatchLock", return_value=lock),
+            patch.object(autologin, "is_windows", return_value=True),
+            patch.object(autologin, "current_windows_ssid", return_value=None),
+            patch.object(autologin, "ensure_authenticated") as authenticate,
+            patch.object(autologin.time, "sleep", side_effect=KeyboardInterrupt),
+        ):
+            with self.assertRaises(KeyboardInterrupt):
+                autologin.watch(60, "seu-wlan", True)
+
+        authenticate.assert_not_called()
+        lock.release.assert_called_once()
+
+    def test_watch_authenticates_only_on_target_wifi(self):
+        lock = Mock()
+        lock.acquire.return_value = True
+
+        with (
+            patch.object(autologin, "WatchLock", return_value=lock),
+            patch.object(autologin, "is_windows", return_value=True),
+            patch.object(autologin, "current_windows_ssid", return_value="seu-wlan"),
+            patch.object(
+                autologin,
+                "ensure_authenticated",
+                return_value=autologin.client.Status(True, "10.0.0.8"),
+            ) as authenticate,
+            patch.object(autologin.time, "sleep", side_effect=KeyboardInterrupt),
+        ):
+            with self.assertRaises(KeyboardInterrupt):
+                autologin.watch(60, "seu-wlan", True)
+
+        authenticate.assert_called_once()
+        lock.release.assert_called_once()
 
 
 if __name__ == "__main__":
