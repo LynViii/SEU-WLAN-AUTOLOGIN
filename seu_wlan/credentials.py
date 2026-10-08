@@ -75,6 +75,48 @@ def _write_password(username: str, password: str) -> bool:
         return False
 
 
+def _masked_password(prompt: str) -> str:
+    """Read a password while showing one * per entered character on Windows."""
+    if os.name != "nt":
+        return getpass.getpass(prompt)
+
+    import msvcrt
+
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    chars: list[str] = []
+
+    while True:
+        char = msvcrt.getwch()
+
+        if char in ("\r", "\n"):
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            return "".join(chars)
+
+        if char == "\x03":
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            raise KeyboardInterrupt
+
+        if char == "\b":
+            if chars:
+                chars.pop()
+                sys.stdout.write("\b \b")
+                sys.stdout.flush()
+            continue
+
+        # Ignore function keys and arrow-key prefixes.
+        if char in ("\x00", "\xe0"):
+            msvcrt.getwch()
+            continue
+
+        if char.isprintable():
+            chars.append(char)
+            sys.stdout.write("*")
+            sys.stdout.flush()
+
+
 def store(username: str, password: str) -> bool:
     username = username.strip()
     if not username or not password:
@@ -96,7 +138,7 @@ def setup() -> tuple[str, str, bool]:
     if not username:
         raise ValueError("一卡通号不能为空。")
 
-    password = getpass.getpass("校园网密码（输入时不会显示）: ")
+    password = _masked_password("校园网密码（输入内容显示为 *）: ")
     if not password:
         raise ValueError("校园网密码不能为空。")
 
