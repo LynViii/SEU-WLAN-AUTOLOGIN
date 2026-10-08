@@ -5,11 +5,12 @@ import argparse
 import codecs
 import os
 import subprocess
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
 
-from seu_wlan import client, credentials, startup
+from seu_wlan import __version__, client, credentials, startup
 
 MAX_LOG_BYTES = 512 * 1024
 
@@ -192,13 +193,40 @@ def watch(interval: int, recover_after: int, profile: str, quiet: bool) -> int:
         time.sleep(interval)
 
 
+def diagnose() -> int:
+    print(f"SEU-WLAN-AUTOLOGIN {__version__}")
+    print(f"运行模式: {'单文件 EXE' if startup.is_frozen() else 'Python 源码'}")
+    print(f"运行文件: {Path(sys.executable if startup.is_frozen() else __file__).resolve()}")
+    print(f"配置目录: {credentials.config_dir()}")
+    print(f"日志文件: {credentials.LOG_FILE}")
+
+    if os.name == "nt":
+        print(f"当前 Wi-Fi: {current_windows_ssid() or '未检测到'}")
+        try:
+            installed = startup.startup_installed()
+        except RuntimeError:
+            installed = False
+        print(f"开机守护: {'已安装' if installed else '未安装'}")
+        if startup.is_frozen():
+            print(f"固定安装位置: {startup.installed_executable()}")
+
+    try:
+        print(f"认证状态: {describe(client.status())}")
+    except client.GatewayUnavailable as exc:
+        print(f"认证网关: 不可访问（{exc}）")
+
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="东南大学 seu-wlan 自动认证")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--status", action="store_true", help="仅查看当前认证状态")
     group.add_argument("--setup", action="store_true", help="重新设置账号密码")
     group.add_argument("--forget", action="store_true", help="删除保存的账号密码")
     group.add_argument("--watch", action="store_true", help="持续监控，掉线后自动重新认证")
+    group.add_argument("--diagnose", action="store_true", help="输出脱敏后的运行环境诊断信息")
     group.add_argument("--install-startup", action="store_true", help="Windows：登录系统后自动启动后台守护")
     group.add_argument("--uninstall-startup", action="store_true", help="Windows：移除自动启动")
     parser.add_argument("--interval", type=int, default=60, help="守护模式检查间隔，默认 60 秒")
@@ -229,17 +257,24 @@ def main(argv: list[str] | None = None) -> int:
             print(describe(client.status()))
             return 0
 
+        if args.diagnose:
+            return diagnose()
+
         if args.install_startup:
             username, password = credentials.get(interactive=True)
             if not credentials.has_persisted_password(username):
                 if not credentials.store(username, password):
                     raise RuntimeError(
                         "无法把密码写入系统凭据管理器，未安装自动启动。"
-                        "请先安装 requirements/desktop.txt 并确认系统 keyring 可用。"
+                        "请确认系统 keyring 可用。"
                     )
             path = startup.install(Path(__file__))
             print(f"✓ 已安装 Windows 自动启动：{path}")
-            print("下次登录 Windows 后会后台运行 --watch，并直接使用已保存凭据自动认证。")
+            if startup.is_frozen():
+                print(f"✓ 后台运行副本：{startup.installed_executable()}")
+                print("现在可以移动或删除当前下载的 EXE；开机守护不会受影响。")
+            else:
+                print("源码模式的启动项依赖当前 Python 和仓库路径，请不要移动仓库。")
             return 0
 
         if args.uninstall_startup:
