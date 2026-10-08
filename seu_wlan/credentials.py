@@ -153,7 +153,7 @@ def _masked_password(prompt: str) -> str:
                     sys.stdout.flush()
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, previous)
-    except (ImportError, OSError, termios.error):
+    except (ImportError, OSError):
         return getpass.getpass(prompt)
 
 
