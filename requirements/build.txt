@@ -1,2 +1,0 @@
--r desktop.txt
-pyinstaller>=6.11,<7
