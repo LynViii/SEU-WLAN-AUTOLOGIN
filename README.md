@@ -1,23 +1,37 @@
 # SEU-WLAN-AUTOLOGIN
 
 [![Python checks](https://github.com/LynViii/SEU-WLAN-AUTOLOGIN/actions/workflows/python.yml/badge.svg)](https://github.com/LynViii/SEU-WLAN-AUTOLOGIN/actions/workflows/python.yml)
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+[![Build Windows EXE](https://github.com/LynViii/SEU-WLAN-AUTOLOGIN/actions/workflows/build-windows.yml/badge.svg)](https://github.com/LynViii/SEU-WLAN-AUTOLOGIN/actions/workflows/build-windows.yml)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-东南大学 `seu-wlan` 自动认证工具。第一次配置账号密码后，后续可自动完成校园网认证。
+一个轻量的东南大学 `seu-wlan` 自动认证工具：**第一次配置账号密码，之后尽量做到连接校园网后自动认证。**
 
-> **Windows + 真实 SEU `seu-wlan` 已于 2026-10-08 完成现场验证，自动认证成功。**
+> Windows 已在真实 SEU `seu-wlan` 环境验证成功。  
+> 本项目为非官方开源工具，与东南大学官方无隶属或授权关系。
 
-> 本项目为非官方开源工具，与东南大学官方无隶属或授权关系。请仅使用本人或已获授权的校园网账号，并遵守学校校园网相关规定。
+## 直接选你的平台
 
-## Windows 快速开始
+| 平台 | 普通用户推荐方式 | 自动化 | 状态 |
+| --- | --- | --- | --- |
+| **Windows** | 单文件 `SEU-WLAN-AUTOLOGIN.exe` | Startup 后台守护 | **真实校园网已验证** |
+| Windows 开发者 | Python 源码 / `seu-wlan` CLI | Startup 后台守护 | **已验证** |
+| macOS | Python `seu-wlan` CLI | LaunchAgent | 待真实校园网实测 |
+| Linux | Python `seu-wlan` CLI | systemd --user | 待真实校园网实测 |
+| Android | Termux + 一键安装脚本 | Termux:Boot / Tasker | 待真机实测 |
+| iOS / iPadOS | Scriptable 单文件 JS + Shortcuts | Wi-Fi 自动化 | 待真机实测 |
+| HarmonyOS | ArkTS 原生小工具 | 规划中 | Prototype |
 
-```bash
-git clone https://github.com/LynViii/SEU-WLAN-AUTOLOGIN.git
-cd SEU-WLAN-AUTOLOGIN
-python -m pip install -r requirements/desktop.txt
-python autologin.py
+完整安装说明：[`docs/INSTALL.md`](docs/INSTALL.md)
+
+## Windows：最简单
+
+公开 Release 后下载：
+
+```text
+SEU-WLAN-AUTOLOGIN.exe
 ```
+
+直接运行即可，不需要 Python，也不需要源码文件夹。
 
 第一次运行：
 
@@ -28,98 +42,117 @@ python autologin.py
 ✓ 已认证（IP: ...）
 ```
 
-密码只显示等量的 `*`，不会显示真实字符。凭据保存后，再次运行不会重复询问账号密码。
+安装自动守护：
 
-## 常用命令
+```powershell
+.\SEU-WLAN-AUTOLOGIN.exe --install-startup
+```
+
+EXE 会把后台使用的副本复制到：
+
+```text
+%LOCALAPPDATA%\SEU-WLAN-AUTOLOGIN\SEU-WLAN-AUTOLOGIN.exe
+```
+
+所以**你下载到桌面、下载目录或 U 盘的那份 EXE 之后可以随便移动或删除**，已经安装的后台守护不受影响。
+
+## Python / 源码方式
+
+Windows、macOS、Linux 都可以：
+
+```bash
+python -m pip install ".[desktop]"
+```
+
+安装后统一使用：
+
+```bash
+seu-wlan
+seu-wlan --status
+seu-wlan --setup
+seu-wlan --watch
+seu-wlan --diagnose
+seu-wlan --install-startup
+seu-wlan --uninstall-startup
+```
+
+不安装包也可以继续：
 
 ```bash
 python autologin.py
-python autologin.py --status
-python autologin.py --setup
-python autologin.py --forget
-python autologin.py --watch
-python autologin.py --install-startup
-python autologin.py --uninstall-startup
 ```
 
-## 平台支持
+## 手机端
 
-| 平台 | 方案 | 当前状态 |
-| --- | --- | --- |
-| Windows | Python + Credential Manager + Startup | **真实校园网已验证** |
-| macOS / Linux | Python + keyring | 待实测 |
-| Android | Termux + Termux:Boot / Tasker | 待实测 |
-| iOS / iPadOS | Shortcuts + Scriptable | 已完成实现，待真机验证 |
-| HarmonyOS | ArkTS 原生方案 | PoC，后台冷启动能力待验证 |
+### Android
 
-详细说明见 [`platforms/`](platforms/)。
-
-## 核心认证流程
-
-```text
-检查 chkstatus
-→ 已认证：结束
-→ 未认证：取得校园网 IP
-→ 调用 ePortal 登录
-→ 再次检查状态
-→ 只有复核成功才算登录成功
-```
-
-架构说明见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
-
-## Windows 后台自动认证
-
-完成一次凭据配置后：
+Termux 中运行仓库自带的一键安装脚本：
 
 ```bash
-python autologin.py --install-startup
+bash platforms/android/install-termux.sh
 ```
 
-以后登录 Windows 后后台运行 `--watch --quiet`。
+详细见 [Android](platforms/android/)。
 
-守护模式会：
+### iOS / iPadOS
 
-- 连接 `seu-wlan` 时自动检查并补登；
-- 当前连接其他 Wi-Fi 时保持等待，不会强制断开其他网络；
-- 网关暂时不可达时按设定次数尝试恢复；
-- 只在状态变化时记录关键日志，避免重复刷屏；
-- 日志使用带 BOM 的 UTF-8，兼容 Windows PowerShell `Get-Content`；
-- 日志超过约 512 KB 自动轮转。
-
-Windows 说明见 [`platforms/windows/`](platforms/windows/)。
-
-## 仓库结构
+Release 提供单个：
 
 ```text
-SEU-WLAN-AUTOLOGIN/
-├── autologin.py
-├── seu_wlan/              # Python 核心
-├── platforms/             # Windows / Android / iOS / HarmonyOS
-├── requirements/          # Python 依赖
-├── tests/                 # 自动测试
-├── docs/                  # 架构与现场测试记录
-├── .github/               # CI / Issue / 维护说明
-├── CHANGELOG.md
-├── LICENSE
-└── README.md
+SEU-WLAN-AUTOLOGIN-Scriptable.js
 ```
 
-## 安全
+导入 Scriptable 后，用 Shortcuts 的 `Wi-Fi → seu-wlan` 自动化触发。账号密码保存在 Scriptable Keychain。
 
-- 密码不写入仓库；
-- Windows / 桌面端通过系统凭据存储保存密码；
+详细见 [iOS](platforms/ios/)。
+
+### HarmonyOS
+
+已经提供 ArkTS 的 SEU 认证核心。最终目标是一个极简 HAP：打开即可登录，密码使用 HarmonyOS Asset Store 保存；系统级冷启动 Wi-Fi 自动触发仍需真机验证。
+
+详细见 [HarmonyOS](platforms/harmonyos/)。
+
+## 核心流程
+
+所有平台都遵循同一条认证逻辑：
+
+```text
+chkstatus
+→ 已认证：结束
+→ 未认证：获取校园网 IP
+→ ePortal 登录
+→ 再查 chkstatus
+→ 复核成功才算认证成功
+```
+
+架构说明：[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+
+## 安全与隐私
+
+- 不包含遥测；
+- 不主动上传账号、密码、校园网 IP 或使用记录；
+- Windows/macOS/Linux 优先使用系统凭据存储；
 - iOS 使用 Scriptable Keychain；
-- Android 自动化凭据仅保存在 Termux 私有目录；
-- 项目不包含遥测。
+- Android Boot 自动化使用 Termux 应用私有目录中的 `600` 配置文件，并在文档中明确其本地明文属性；
+- SEU 当前 ePortal 协议会把密码作为 HTTPS GET 查询参数发送，因此不要公开完整请求 URL 或抓包日志。
 
-安全说明见 [`.github/SECURITY.md`](.github/SECURITY.md)。
+详见 [Security Policy](.github/SECURITY.md)。
+
+## Release 内容
+
+正式版本计划统一提供：
+
+```text
+SEU-WLAN-AUTOLOGIN.exe              # Windows x64 单文件
+SHA256SUMS.txt                      # EXE 校验
+seu_wlan_autologin-*.whl           # Python 跨平台包
+seu_wlan_autologin-*.tar.gz        # Python 源码包
+SEU-WLAN-AUTOLOGIN-Scriptable.js   # iOS / iPadOS
+Source code                         # GitHub 自动提供
+```
 
 ## 来源与许可
 
-本项目的 SEU Dr.COM / ePortal 认证流程参考并改进自 [NN708/seu-wlan-login](https://github.com/NN708/seu-wlan-login)。上游项目采用 MIT License；本仓库保留上游版权声明，并继续采用 MIT License。
+SEU Dr.COM / ePortal 的早期认证流程参考并改进自 [NN708/seu-wlan-login](https://github.com/NN708/seu-wlan-login)。当前实现已重新设计凭据存储、异常处理、认证复核、后台守护、日志、测试、打包和多平台入口。
 
-当前实现已对凭据存储、异常处理、状态复核、Windows 后台守护、日志、测试及多平台方案进行了重新设计和扩展。
-
-## License
-
-MIT License.
+本仓库采用 MIT License，并按 MIT 条款保留相关版权声明。
