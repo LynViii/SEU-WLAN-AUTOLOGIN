@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- 公开发布前恢复上游 MIT 版权声明，并在 README 明确项目来源与非官方属性。
+
 - **2026-10-08：Windows 真实 SEU `seu-wlan` 自动认证现场验证成功。**
 - Windows 密码输入改为星号掩码，可确认实际输入长度但不泄露真实字符。
 - 修复 Windows PowerShell 读取 `autologin.log` 时中文乱码的问题，并兼容已有 UTF-8 日志。
