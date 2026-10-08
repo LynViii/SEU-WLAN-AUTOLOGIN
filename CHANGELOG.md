@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- 增加 Windows 单文件 EXE 构建，普通用户无需 Python。
+- EXE 安装后台守护时会自复制到 %LOCALAPPDATA% 固定目录，原下载文件可移动或删除。
+- 增加标准 Python 包入口和 seu-wlan 命令，统一 Windows/macOS/Linux/Android 的源码体验。
+- 增加 macOS LaunchAgent 与 Linux 用户级 systemd 后台守护。
+- 增加 Android Termux 一键安装/卸载脚本。
+- iOS Scriptable 增加管理菜单、重新配置和清除凭据。
+- 增加后台守护单实例锁和 --diagnose 诊断命令。
+- 增加自动 Release 流程：Windows EXE、SHA256、Python wheel/sdist、iOS JS。
+- 明确 HarmonyOS 最终采用轻量 ArkTS HAP + Asset Store 路线；在真机验证前不提交伪完整工程。
+
 - 公开发布前恢复上游 MIT 版权声明，并在 README 明确项目来源与非官方属性。
 
 - **2026-10-08：Windows 真实 SEU `seu-wlan` 自动认证现场验证成功。**
