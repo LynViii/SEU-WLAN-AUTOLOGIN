@@ -6,7 +6,6 @@ on:
     paths:
       - "autologin.py"
       - "seu_wlan/**"
-      - "requirements/**"
       - "packaging/**"
       - "pyproject.toml"
       - ".github/workflows/build-windows.yml"
@@ -24,7 +23,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install build dependencies
-        run: python -m pip install -r requirements/build.txt
+        run: python -m pip install ".[build]"
 
       - name: Build single-file EXE
         run: pyinstaller --clean --noconfirm packaging/windows.spec
