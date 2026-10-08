@@ -21,7 +21,7 @@
 | iOS / iPadOS | Scriptable 单文件 JS + Shortcuts | Wi-Fi 自动化 | 待真机实测 |
 | HarmonyOS | ArkTS 原生小工具 | 规划中 | Prototype |
 
-完整安装说明：[`docs/INSTALL.md`](docs/INSTALL.md)
+完整安装说明：[`docs/INSTALL.md`](docs/INSTALL.md) ｜ 常见问题：[`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)
 
 ## Windows：最简单
 
@@ -148,6 +148,8 @@ SHA256SUMS.txt                      # EXE 校验
 seu_wlan_autologin-*.whl           # Python 跨平台包
 seu_wlan_autologin-*.tar.gz        # Python 源码包
 SEU-WLAN-AUTOLOGIN-Scriptable.js   # iOS / iPadOS
+SEU-WLAN-AUTOLOGIN-Termux-install.sh
+SEU-WLAN-AUTOLOGIN-Termux-uninstall.sh
 Source code                         # GitHub 自动提供
 ```
 
