@@ -1,72 +1,77 @@
 # Installation Guide
 
-SEU-WLAN-AUTOLOGIN 的目标是让不同平台都尽量使用最轻的入口。
+## Windows
 
-| 平台 | 推荐入口 | 是否需要 Python |
-| --- | --- | --- |
-| Windows 普通用户 | 单文件 `SEU-WLAN-AUTOLOGIN.exe` | 否 |
-| Windows 开发者 | Python 包 / 源码目录 | 是 |
-| macOS / Linux | Python 包 / 源码目录 | 是 |
-| Android | Termux + Python CLI | Termux 内需要 |
-| iOS / iPadOS | Scriptable + Shortcuts | 否 |
-| HarmonyOS | ArkTS 小工具 | 否，当前仍为 Prototype |
+### 普通用户
 
-## Windows：推荐 EXE
+Release 下载一个：
 
-Release 中下载：
-
-```text
+~~~text
 SEU-WLAN-AUTOLOGIN.exe
-```
+~~~
 
-双击或 PowerShell 运行即可。第一次输入账号密码，之后自动复用凭据。
+直接运行。
 
-安装后台自动认证：
+需要后台自动认证：
 
-```powershell
+~~~powershell
 .\SEU-WLAN-AUTOLOGIN.exe --install-startup
-```
+~~~
 
-程序会把后台使用的副本复制到：
+安装后后台副本位于：
 
-```text
+~~~text
 %LOCALAPPDATA%\SEU-WLAN-AUTOLOGIN\SEU-WLAN-AUTOLOGIN.exe
-```
+~~~
 
-因此下载目录里的 EXE 后续可以移动或删除。
+所以原下载 EXE 可以移动或删除。
 
-## Windows / macOS / Linux：Python 包
+### 源码用户
 
-下载源码后：
-
-```bash
+~~~powershell
 python -m pip install ".[desktop]"
-```
-
-之后统一使用：
-
-```bash
 seu-wlan
-seu-wlan --status
-seu-wlan --setup
-seu-wlan --watch
-seu-wlan --diagnose
-```
+~~~
 
-也可以不安装包，继续运行：
+## macOS / Linux
 
-```bash
-python autologin.py
-```
+下载源码：
+
+~~~bash
+python -m pip install ".[desktop]"
+seu-wlan
+~~~
+
+后台守护：
+
+~~~bash
+seu-wlan --install-startup
+~~~
+
+macOS 使用 LaunchAgent；Linux 使用用户级 systemd。
 
 ## Android
 
-使用 Termux。详见 [Android](../platforms/android/)。
+Termux 中：
+
+~~~bash
+pkg update
+pkg install python git
+git clone https://github.com/LynViii/SEU-WLAN-AUTOLOGIN.git
+cd SEU-WLAN-AUTOLOGIN
+bash platforms/android/install-termux.sh
+~~~
+
+需要更省电时，用 Tasker 在连接 seu-wlan 后执行一次登录，而不是常驻守护。
 
 ## iOS / iPadOS
 
-只需要 Scriptable 脚本和一个 Shortcuts Wi-Fi 自动化。详见 [iOS](../platforms/ios/)。
+1. 安装 Scriptable；
+2. 导入 Release 的 SEU-WLAN-AUTOLOGIN-Scriptable.js；
+3. 手动运行一次保存凭据；
+4. Shortcuts 创建 Wi-Fi → seu-wlan 自动化；
+5. 运行 Scriptable 脚本。
 
 ## HarmonyOS
 
-当前提供 ArkTS 认证核心；目标是最终提供一个极简 HAP 小工具。详见 [HarmonyOS](../platforms/harmonyos/)。
+当前还没有正式 HAP Release。仓库提供 ArkTS 登录核心，待真机验证后补原生极简 App。
