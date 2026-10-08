@@ -3,12 +3,16 @@ import os
 
 from PyInstaller.utils.hooks import collect_all, copy_metadata
 
+ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
+ENTRY = os.path.join(ROOT, "autologin.py")
+VERSION_FILE = os.path.join(SPECPATH, "version_info.txt")
+
 keyring_datas, keyring_binaries, keyring_hiddenimports = collect_all("keyring")
 keyring_datas += copy_metadata("keyring", recursive=True)
 
 a = Analysis(
-    ["autologin.py"],
-    pathex=["."],
+    [ENTRY],
+    pathex=[ROOT],
     binaries=keyring_binaries,
     datas=keyring_datas,
     hiddenimports=keyring_hiddenimports,
@@ -36,5 +40,5 @@ exe = EXE(
     console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
-    version=os.path.join(SPECPATH, "version_info.txt"),
+    version=VERSION_FILE,
 )
