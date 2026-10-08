@@ -19,10 +19,14 @@ except ImportError:
 
 def config_dir() -> Path:
     if os.name == "nt":
-        return Path(os.environ.get("APPDATA", str(Path.home()))) / APP_NAME
+        appdata = os.environ.get("APPDATA")
+        base = Path(appdata) if appdata else Path.home()
+        return base / APP_NAME
     if sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / APP_NAME
-    return Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / APP_NAME
+    xdg_config = os.environ.get("XDG_CONFIG_HOME")
+    base = Path(xdg_config) if xdg_config else Path.home() / ".config"
+    return base / APP_NAME
 
 
 CONFIG_FILE = config_dir() / "config.json"
