@@ -1,2 +1,0 @@
--r base.txt
-keyring>=25,<26
