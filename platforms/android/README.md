@@ -1,55 +1,63 @@
 # Android
 
-推荐两种方式：**Termux + Termux:Boot**，或 **Tasker + Termux:Tasker**。
+Android 推荐使用 **Termux**。它复用同一套 Python 核心，不需要维护第二套 Android 登录协议实现。
 
-## A. 开机后持续守护
+## 最简单安装
 
-安装 Termux 与 Termux:Boot 后，在 Termux 中：
+先从 F-Droid 安装：
+
+- Termux
+- Termux:Boot（需要开机自动认证时）
+
+在 Termux 中：
 
 ```bash
 pkg update
 pkg install python git
 git clone https://github.com/LynViii/SEU-WLAN-AUTOLOGIN.git
 cd SEU-WLAN-AUTOLOGIN
-python -m pip install -r requirements/base.txt
+bash platforms/android/install-termux.sh
 ```
 
-创建：
+脚本会：
+
+1. 安装 `seu-wlan` CLI；
+2. 询问一卡通号和密码；
+3. 把自动化凭据写入 Termux 私有目录；
+4. 创建 Termux:Boot 守护脚本。
+
+立即测试：
 
 ```bash
-mkdir -p ~/.termux/boot
-nano ~/.termux/boot/seu-wlan-autologin
+. "$HOME/.config/seu-wlan-autologin/termux.env"
+python -m seu_wlan
 ```
 
-内容：
+## 更省电：Wi-Fi 事件触发
 
-```sh
-#!/data/data/com.termux/files/usr/bin/sh
-export SEU_WLAN_USERNAME='你的一卡通号'
-export SEU_WLAN_PASSWORD='你的校园网密码'
-cd "$HOME/SEU-WLAN-AUTOLOGIN"
-python autologin.py --watch --quiet
-```
-
-然后：
+如果使用 Tasker + Termux:Tasker，可以在连接 `seu-wlan` 时只执行一次：
 
 ```bash
-chmod 700 ~/.termux/boot/seu-wlan-autologin
+. "$HOME/.config/seu-wlan-autologin/termux.env"
+python -m seu_wlan --quiet
 ```
 
-部分 Android 厂商需要允许 Termux / Termux:Boot 自启动并关闭对应的电池优化限制。
+这样不需要长期运行 Python 守护循环。
 
-## B. 连接 seu-wlan 时触发
+## 凭据说明
 
-更省电的长期方案是使用 Tasker + Termux:Tasker，在连接 `seu-wlan` 时执行一次：
+Termux 没有与桌面端完全相同的通用 `keyring` 后端。安装脚本会把账号密码保存到：
+
+```text
+~/.config/seu-wlan-autologin/termux.env
+```
+
+文件权限设为 `600`，目录位于 Termux 的 Android 应用私有存储中。它仍属于**本地明文凭据**；如果你不接受这种方式，不要安装 Boot 自动化，只在需要时手动运行并输入凭据。
+
+## 卸载
 
 ```bash
-cd "$HOME/SEU-WLAN-AUTOLOGIN"
-SEU_WLAN_USERNAME='一卡通号' SEU_WLAN_PASSWORD='密码' python autologin.py --quiet
+bash platforms/android/uninstall-termux.sh
 ```
 
-这种方式不需要常驻 Python 循环。
-
-## 说明
-
-Android/Termux 不使用桌面端 keyring 方案。自动化凭据应只放在 Termux 私有目录，不要同步到 Git。
+部分 Android 厂商还需要允许 Termux / Termux:Boot 自启动，并关闭对应的电池优化限制。
