@@ -1,77 +1,82 @@
-# Installation Guide
+# Installation
+
+先选择平台。普通用户只需要看自己对应的一段。
 
 ## Windows
 
-### 普通用户
+### EXE（推荐）
 
-Release 下载一个：
+从 GitHub Release 下载：
 
-~~~text
+```text
 SEU-WLAN-AUTOLOGIN.exe
-~~~
+```
 
-直接运行。
+直接运行即可，不需要 Python。
 
-需要后台自动认证：
+安装后台自动认证：
 
-~~~powershell
+```powershell
 .\SEU-WLAN-AUTOLOGIN.exe --install-startup
-~~~
+```
 
-安装后后台副本位于：
+后台副本会安装到：
 
-~~~text
+```text
 %LOCALAPPDATA%\SEU-WLAN-AUTOLOGIN\SEU-WLAN-AUTOLOGIN.exe
-~~~
+```
 
-所以原下载 EXE 可以移动或删除。
+之后最初下载的 EXE 可以移动或删除。
 
-### 源码用户
+### Python / 源码
 
-~~~powershell
-python -m pip install ".[desktop]"
+```powershell
+git clone https://github.com/LynViii/SEU-WLAN-AUTOLOGIN.git
+cd SEU-WLAN-AUTOLOGIN
+python -m pip install -e ".[desktop]"
 seu-wlan
-~~~
+```
 
 ## macOS / Linux
 
-下载源码：
-
-~~~bash
-python -m pip install ".[desktop]"
+```bash
+git clone https://github.com/LynViii/SEU-WLAN-AUTOLOGIN.git
+cd SEU-WLAN-AUTOLOGIN
+python -m pip install -e ".[desktop]"
 seu-wlan
-~~~
+```
 
 后台守护：
 
-~~~bash
+```bash
 seu-wlan --install-startup
-~~~
+```
 
-macOS 使用 LaunchAgent；Linux 使用用户级 systemd。
+macOS 使用用户级 LaunchAgent；Linux 使用用户级 systemd。
 
 ## Android
 
-Termux 中：
+先安装 Termux；需要开机自动认证时再安装 Termux:Boot。
 
-~~~bash
+公开仓库后可直接：
+
+```bash
 pkg update
-pkg install python git
-git clone https://github.com/LynViii/SEU-WLAN-AUTOLOGIN.git
-cd SEU-WLAN-AUTOLOGIN
-bash platforms/android/install-termux.sh
-~~~
+pkg install python git curl
+curl -fsSLo install-seu-wlan.sh https://raw.githubusercontent.com/LynViii/SEU-WLAN-AUTOLOGIN/main/platforms/android/install-termux.sh
+bash install-seu-wlan.sh
+```
 
-需要更省电时，用 Tasker 在连接 seu-wlan 后执行一次登录，而不是常驻守护。
+也可以 clone 仓库后运行 `platforms/android/install-termux.sh`。
 
 ## iOS / iPadOS
 
 1. 安装 Scriptable；
-2. 导入 Release 的 SEU-WLAN-AUTOLOGIN-Scriptable.js；
-3. 手动运行一次保存凭据；
-4. Shortcuts 创建 Wi-Fi → seu-wlan 自动化；
-5. 运行 Scriptable 脚本。
+2. 从 Release 获取 `SEU-WLAN-AUTOLOGIN-Scriptable.js`；
+3. 导入 Scriptable 并手动运行一次保存凭据；
+4. Shortcuts 创建 `Wi-Fi → seu-wlan` 自动化；
+5. 动作选择 Scriptable 的 Run Script。
 
 ## HarmonyOS
 
-当前还没有正式 HAP Release。仓库提供 ArkTS 登录核心，待真机验证后补原生极简 App。
+当前仓库提供 ArkTS 认证核心；完整 HAP 在真机和 DevEco Studio 验证后再发布，避免提供未经编译验证的安装包。
