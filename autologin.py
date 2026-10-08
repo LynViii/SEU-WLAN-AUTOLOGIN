@@ -148,58 +148,114 @@ def reconnect_windows(profile: str, *, quiet: bool, to_log: bool) -> bool:
     return result.returncode == 0
 
 
+class WatchLock:
+    def __init__(self) -> None:
+        self.path = credentials.config_dir() / "watch.lock"
+        self.handle = None
+
+    def acquire(self) -> bool:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.handle = self.path.open("a+b")
+        self.handle.seek(0)
+        if self.handle.tell() == 0:
+            self.handle.write(b"0")
+            self.handle.flush()
+        self.handle.seek(0)
+
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(self.handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(self.handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return True
+        except (OSError, ImportError):
+            self.handle.close()
+            self.handle = None
+            return False
+
+    def release(self) -> None:
+        if self.handle is None:
+            return
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                self.handle.seek(0)
+                msvcrt.locking(self.handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(self.handle.fileno(), fcntl.LOCK_UN)
+        except (OSError, ImportError):
+            pass
+        self.handle.close()
+        self.handle = None
+
+
 def watch(interval: int, recover_after: int, profile: str, quiet: bool) -> int:
+    lock = WatchLock()
+    if not lock.acquire():
+        emit("已有一个 SEU WLAN 后台守护实例在运行，当前实例退出。", quiet=quiet, to_log=False)
+        return 0
+
     failures = 0
     last_state: str | None = None
     emit("SEU WLAN 后台守护已启动。", quiet=quiet, to_log=True)
 
-    while True:
-        if os.name == "nt":
-            ssid = current_windows_ssid()
-            if ssid and ssid.casefold() != profile.casefold():
-                state = f"other-wifi:{ssid}"
+    try:
+        while True:
+            if os.name == "nt":
+                ssid = current_windows_ssid()
+                if ssid and ssid.casefold() != profile.casefold():
+                    state = f"other-wifi:{ssid}"
+                    if state != last_state:
+                        emit(
+                            f"当前 Wi-Fi：{ssid}；等待连接 {profile}。",
+                            quiet=quiet,
+                            to_log=True,
+                        )
+                    last_state = state
+                    failures = 0
+                    time.sleep(interval)
+                    continue
+
+            try:
+                result = ensure_authenticated(
+                    interactive=False,
+                    quiet=True,
+                    to_log=False,
+                )
+                if last_state != "authenticated":
+                    emit(describe(result), quiet=quiet, to_log=True)
+                last_state = "authenticated"
+                failures = 0
+
+            except client.AuthenticationRejected as exc:
+                state = f"auth-rejected:{exc}"
                 if state != last_state:
-                    emit(
-                        f"当前 Wi-Fi：{ssid}；等待连接 {profile}。",
-                        quiet=quiet,
-                        to_log=True,
-                    )
+                    emit(f"✗ 认证失败：{exc}", quiet=quiet, to_log=True)
                 last_state = state
                 failures = 0
-                time.sleep(interval)
-                continue
 
-        try:
-            result = ensure_authenticated(
-                interactive=False,
-                quiet=True,
-                to_log=False,
-            )
-            if last_state != "authenticated":
-                emit(describe(result), quiet=quiet, to_log=True)
-            last_state = "authenticated"
-            failures = 0
+            except (client.GatewayUnavailable, ValueError) as exc:
+                failures += 1
+                state = f"gateway-error:{exc}"
+                if state != last_state:
+                    emit(f"! {exc}", quiet=quiet, to_log=True)
+                last_state = state
 
-        except client.AuthenticationRejected as exc:
-            state = f"auth-rejected:{exc}"
-            if state != last_state:
-                emit(f"✗ 认证失败：{exc}", quiet=quiet, to_log=True)
-            last_state = state
-            failures = 0
+                if failures >= recover_after and os.name == "nt":
+                    reconnect_windows(profile, quiet=quiet, to_log=True)
+                    failures = 0
+                    time.sleep(8)
 
-        except (client.GatewayUnavailable, ValueError) as exc:
-            failures += 1
-            state = f"gateway-error:{exc}"
-            if state != last_state:
-                emit(f"! {exc}", quiet=quiet, to_log=True)
-            last_state = state
-
-            if failures >= recover_after and os.name == "nt":
-                reconnect_windows(profile, quiet=quiet, to_log=True)
-                failures = 0
-                time.sleep(8)
-
-        time.sleep(interval)
+            time.sleep(interval)
+    finally:
+        lock.release()
 
 
 def diagnose() -> int:
@@ -209,13 +265,14 @@ def diagnose() -> int:
     print(f"配置目录: {credentials.config_dir()}")
     print(f"日志文件: {credentials.LOG_FILE}")
 
+    try:
+        installed = startup.startup_installed()
+    except RuntimeError:
+        installed = False
+    print(f"后台守护: {'已安装' if installed else '未安装'}")
+
     if os.name == "nt":
         print(f"当前 Wi-Fi: {current_windows_ssid() or '未检测到'}")
-        try:
-            installed = startup.startup_installed()
-        except RuntimeError:
-            installed = False
-        print(f"开机守护: {'已安装' if installed else '未安装'}")
         if startup.is_frozen():
             print(f"固定安装位置: {startup.installed_executable()}")
 
