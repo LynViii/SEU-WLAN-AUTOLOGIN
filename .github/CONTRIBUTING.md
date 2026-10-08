@@ -7,27 +7,37 @@
 ```bash
 git clone https://github.com/LynViii/SEU-WLAN-AUTOLOGIN.git
 cd SEU-WLAN-AUTOLOGIN
-python -m pip install -r requirements/desktop.txt
+python -m pip install -e ".[desktop]"
 ```
 
-运行检查：
+运行完整检查：
 
 ```bash
 python -m py_compile autologin.py seu_wlan/*.py
 python -m unittest discover -s tests -v
+seu-wlan --version
+python -m seu_wlan --version
+```
+
+Windows EXE 构建：
+
+```bash
+python -m pip install -e ".[build]"
+pyinstaller --clean --noconfirm packaging/windows.spec
 ```
 
 ## 提交问题时请提供
 
 - 操作系统与版本；
-- Python 版本；
+- 工具版本；
 - 是否已连接 `seu-wlan`；
 - 执行的命令；
-- 完整错误信息或脱敏后的终端输出；
+- `--diagnose` 输出；
+- 脱敏后的错误信息或日志；
 - 问题是否可稳定复现。
 
-**不要提交一卡通号、校园网密码、Cookie、凭据文件或其他敏感信息。**
+**不要提交一卡通号、校园网密码、Cookie、完整登录 URL、凭据文件或其他敏感信息。**
 
 ## Pull Request
 
-建议一个 PR 只解决一个明确问题。涉及认证协议变化时，请同步补充测试；涉及用户行为变化时，请同步更新 README 或对应平台文档。
+一个 PR 尽量只解决一个明确问题。涉及认证协议变化时，请同步补测试；涉及用户行为或安装方式变化时，请同步更新 README / docs / platforms 中对应文档。
