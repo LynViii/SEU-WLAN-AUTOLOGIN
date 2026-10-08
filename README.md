@@ -8,6 +8,8 @@
 
 > **Windows + 真实 SEU `seu-wlan` 已于 2026-10-08 完成现场验证，自动认证成功。**
 
+> 本项目为非官方开源工具，与东南大学官方无隶属或授权关系。请仅使用本人或已获授权的校园网账号，并遵守学校校园网相关规定。
+
 ## Windows 快速开始
 
 ```bash
@@ -111,6 +113,12 @@ SEU-WLAN-AUTOLOGIN/
 - 项目不包含遥测。
 
 安全说明见 [`.github/SECURITY.md`](.github/SECURITY.md)。
+
+## 来源与许可
+
+本项目的 SEU Dr.COM / ePortal 认证流程参考并改进自 [NN708/seu-wlan-login](https://github.com/NN708/seu-wlan-login)。上游项目采用 MIT License；本仓库保留上游版权声明，并继续采用 MIT License。
+
+当前实现已对凭据存储、异常处理、状态复核、Windows 后台守护、日志、测试及多平台方案进行了重新设计和扩展。
 
 ## License
 
