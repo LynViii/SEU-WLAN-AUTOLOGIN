@@ -37,6 +37,7 @@ jobs:
           name: python-package
           path: dist/*
           if-no-files-found: error
+          retention-days: 1
 
   windows-exe:
     needs: verify-version
@@ -68,6 +69,7 @@ jobs:
             dist/SEU-WLAN-AUTOLOGIN.exe
             dist/SHA256SUMS.txt
           if-no-files-found: error
+          retention-days: 1
 
   publish:
     needs: [python-package, windows-exe]
