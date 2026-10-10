@@ -44,11 +44,13 @@ jobs:
           $hash = (Get-FileHash .\dist\SEU-WLAN-AUTOLOGIN.exe -Algorithm SHA256).Hash.ToLower()
           "$hash  SEU-WLAN-AUTOLOGIN.exe" | Out-File .\dist\SHA256SUMS.txt -Encoding ascii
 
-      - uses: actions/upload-artifact@v6
+      - name: Upload manual build for download
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v6
         with:
           name: SEU-WLAN-AUTOLOGIN-windows-x64
           path: |
             dist/SEU-WLAN-AUTOLOGIN.exe
             dist/SHA256SUMS.txt
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
