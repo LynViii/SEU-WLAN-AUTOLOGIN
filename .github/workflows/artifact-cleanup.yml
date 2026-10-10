@@ -1,0 +1,43 @@
+name: Clean old Actions artifacts
+
+on:
+  push:
+    paths:
+      - ".github/workflows/artifact-cleanup.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * 0"
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Keep latest artifact of each name and delete obsolete copies
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          declare -A kept=()
+          count=0
+          bytes=0
+          while IFS=$'\t' read -r id name size; do
+            [[ -n "$id" ]] || continue
+            if [[ -z "${kept[$name]+x}" ]]; then
+              kept["$name"]=1
+              echo "Keep latest artifact: $name (id=$id)"
+              continue
+            fi
+            gh api --method DELETE "repos/$GH_REPO/actions/artifacts/$id" >/dev/null
+            count=$((count + 1))
+            bytes=$((bytes + size))
+            echo "Deleted old artifact: $name (id=$id)"
+            sleep 0.25
+          done < <(gh api --paginate "repos/$GH_REPO/actions/artifacts?per_page=100" --jq '.artifacts[] | [.id, .name, .size_in_bytes] | @tsv')
+          echo "Cleanup complete: $count artifacts removed; approx. $bytes bytes freed."
